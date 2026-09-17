@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, FormEvent, useRef } from 'react';
 import { Send, Lock } from 'lucide-react';
-import { db } from '../../firebase'; 
+import { db } from '../firebase';
 import { collection, doc, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc } from 'firebase/firestore';
 
 interface Guest {
