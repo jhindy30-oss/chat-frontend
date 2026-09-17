@@ -1,39 +1,49 @@
-// app/dashboard/page.tsx
 'use client';
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 
-const socket = io('https://your-backend.com');
+// Make sure this points to your live Render URL!
+const socket = io('https://your-backend.com'); 
+
+// 1. Define the structure of a Guest
+interface Guest {
+  guestId: string;
+  source: string;
+}
 
 export default function HostDashboard() {
-  const [queue, setQueue] = useState([]);
-  const [activeChat, setActiveChat] = useState(null);
+  // 2. Apply the Guest type to the state array
+  const [queue, setQueue] = useState<Guest[]>([]);
+  const [activeChat, setActiveChat] = useState<string | null>(null);
 
   useEffect(() => {
     socket.emit('register-host');
 
-    socket.on('new-guest-waiting', (guest) => {
+    socket.on('new-guest-waiting', (guest: Guest) => {
       setQueue((prev) => [...prev, guest]);
     });
 
-    socket.on('queue-update', (updatedQueue) => {
+    socket.on('queue-update', (updatedQueue: Guest[]) => {
       setQueue(updatedQueue);
     });
     
-    socket.on('chat-started', (data) => {
+    socket.on('chat-started', (data: { roomId: string }) => {
         setActiveChat(data.roomId);
     });
 
-    return () => socket.disconnect();
+    // 3. Prevent returning the Socket object
+    return () => {
+      socket.disconnect(); 
+    };
   }, []);
 
-  const acceptGuest = (guestId) => {
+  // 4. Type the function parameter
+  const acceptGuest = (guestId: string) => {
     socket.emit('accept-guest', guestId);
   };
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar Queue */}
       <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
         <h2 className="p-4 font-bold text-lg border-b">Waiting Guests ({queue.length})</h2>
         <div className="flex-1 overflow-y-auto">
@@ -54,7 +64,6 @@ export default function HostDashboard() {
         </div>
       </div>
 
-      {/* Main Chat Area */}
       <div className="flex-1 bg-gray-50 flex items-center justify-center">
         {!activeChat ? (
           <div className="text-gray-400 text-center">
@@ -63,7 +72,6 @@ export default function HostDashboard() {
           </div>
         ) : (
           <div className="w-full h-full p-6">
-            {/* Render Host chat interface here */}
             <h2 className="text-2xl font-bold mb-4">Chatting with Guest</h2>
           </div>
         )}
