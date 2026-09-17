@@ -24,8 +24,20 @@ export default function HostDashboard() {
   useEffect(() => {
     socket.emit('register-host');
 
-    socket.on('new-guest-waiting', (guest: Guest) => {
+   socket.on('new-guest-waiting', (guest: Guest) => {
       setQueue((prev) => [...prev, guest]);
+      
+      // Play an audible ping
+      const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+      audio.volume = 0.5;
+      audio.play().catch(e => console.log('Audio playback blocked by browser until interacted with'));
+
+      // Trigger browser notification
+      if (Notification.permission === "granted") {
+        new Notification("New Hopeline Request", {
+          body: `${guest.profile.name} (${guest.profile.age}) is waiting to connect.`,
+        });
+      }
     });
 
     socket.on('queue-update', (updatedQueue: Guest[]) => {
