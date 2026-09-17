@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 
-const socket = io('https://your-backend.com'); 
+const socket = io('https://chat-backend-u9kl.onrender.com'); 
 
 interface Guest {
   guestId: string;
