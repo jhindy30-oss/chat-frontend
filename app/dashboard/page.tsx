@@ -1,94 +1,87 @@
 'use client';
-import { useEffect, useState, FormEvent } from 'react';
-import { io } from 'socket.io-client';
+import { useEffect, useState, FormEvent, useRef } from 'react';
 import { Send, Lock } from 'lucide-react';
-import CryptoJS from 'crypto-js';
-
-const socket = io('https://chat-backend-u9kl.onrender.com');
-
-interface GuestProfile {
-  name: string;
-  age: string;
-  language: string;
-  belief: string;
-}
+import { db } from '../../firebase'; 
+import { collection, doc, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc } from 'firebase/firestore';
 
 interface Guest {
-  guestId: string;
+  id: string;
   source: string;
-  profile: GuestProfile;
+  profile: { name: string; age: string; language: string; belief: string; };
+  status: string;
 }
 
 interface Message {
+  id: string;
   text: string;
-  senderId: string;
+  sender: 'guest' | 'admin';
 }
 
 export default function HostDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [password, setPassword] = useState('');
   
-  const [queue, setQueue] = useState<Guest[]>([]);
+  const [chats, setChats] = useState<Guest[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  
+  const chatListLengthRef = useRef(0);
 
-  // Request browser notification permissions on load
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
       Notification.requestPermission();
     }
   }, []);
 
+  // 1. Global Inbox Listener
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    // Prevent re-registering if we are already in a chat
-    if (!activeChat) {
-      socket.emit('register-host');
-    }
+    const chatsRef = collection(db, 'chats');
+    const q = query(chatsRef, orderBy('lastMessageAt', 'desc'));
 
-    socket.on('new-guest-waiting', (guest: Guest) => {
-      setQueue((prev) => [...prev, guest]);
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedChats = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Guest[];
       
-      // Play an audible ping
-      const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-      audio.volume = 0.5;
-      audio.play().catch(e => console.log('Audio playback blocked by browser until interacted with'));
+      setChats(fetchedChats);
 
-      // Trigger browser notification
-      if (Notification.permission === "granted") {
-        new Notification("New Hopeline Request", {
-          body: `${guest.profile.name} (${guest.profile.age}) is waiting to connect.`,
-        });
+      // Trigger alerts if a brand new chat was created
+      if (fetchedChats.length > chatListLengthRef.current && chatListLengthRef.current !== 0) {
+        const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+        audio.volume = 0.5;
+        audio.play().catch(() => console.log('Audio blocked'));
+
+        if (Notification.permission === "granted") {
+          new Notification("New Hopeline Request", { body: "A new guest has submitted an intake form." });
+        }
       }
+      chatListLengthRef.current = fetchedChats.length;
     });
 
-    socket.on('queue-update', (updatedQueue: Guest[]) => {
-      setQueue(updatedQueue);
-    });
-    
-    socket.on('chat-started', (data: { roomId: string }) => {
-        setActiveChat(data.roomId);
-        setMessages([]);
+    return () => unsubscribe();
+  }, [isAuthenticated]);
+
+  // 2. Active Chat Listener
+  useEffect(() => {
+    if (!activeChat) return;
+
+    const messagesRef = collection(db, 'chats', activeChat, 'messages');
+    const q = query(messagesRef, orderBy('timestamp', 'asc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedMessages = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...(doc.data() as Omit<Message, 'id'>)
+      }));
+      setMessages(fetchedMessages);
     });
 
-    socket.on('receive-message', (message: Message) => {
-      if (!activeChat) return;
-      // Decrypt incoming message
-      const bytes = CryptoJS.AES.decrypt(message.text, activeChat);
-      const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
-      setMessages((prev) => [...prev, { ...message, text: decryptedText }]);
-    });
-
-    // FIX: Safely remove listeners without disconnecting the entire socket
-    return () => {
-      socket.off('new-guest-waiting');
-      socket.off('queue-update');
-      socket.off('chat-started');
-      socket.off('receive-message');
-    };
-  }, [isAuthenticated, activeChat]);
+    return () => unsubscribe();
+  }, [activeChat]);
 
   const handleLogin = (e: FormEvent) => {
     e.preventDefault();
@@ -96,21 +89,20 @@ export default function HostDashboard() {
     else alert('Incorrect password');
   };
 
-  const acceptGuest = (guestId: string) => {
-    socket.emit('accept-guest', guestId);
-  };
-
-  const sendMessage = (e: FormEvent) => {
+  const sendMessage = async (e: FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !activeChat) return;
 
-    // Encrypt outgoing message
-    const encryptedText = CryptoJS.AES.encrypt(input, activeChat).toString();
-    const msgData = { roomId: activeChat, text: encryptedText, senderId: socket.id as string };
-    
-    socket.emit('send-message', msgData);
-    setMessages((prev) => [...prev, { text: input, senderId: socket.id as string }]);
+    const textToSave = input;
     setInput('');
+
+    await addDoc(collection(db, 'chats', activeChat, 'messages'), {
+      text: textToSave,
+      sender: 'admin',
+      timestamp: serverTimestamp()
+    });
+
+    await setDoc(doc(db, 'chats', activeChat), { lastMessageAt: serverTimestamp() }, { merge: true });
   };
 
   if (!isAuthenticated) {
@@ -129,48 +121,41 @@ export default function HostDashboard() {
   return (
     <div className="flex h-screen bg-gray-50 text-gray-900">
       <div className="w-80 bg-white border-r border-gray-200 flex flex-col shadow-sm z-10">
-        <h2 className="p-4 font-bold text-lg border-b bg-gray-50">Waiting Guests ({queue.length})</h2>
+        <h2 className="p-4 font-bold text-lg border-b bg-gray-50">Active Threads ({chats.length})</h2>
         <div className="flex-1 overflow-y-auto">
-          {queue.map((guest) => (
-            <div key={guest.guestId} className="p-4 border-b hover:bg-gray-50 flex flex-col transition-colors">
-              <div className="mb-3">
-                <p className="font-bold text-gray-800">{guest.profile.name}, {guest.profile.age}</p>
-                <p className="text-sm text-gray-600">Lang: {guest.profile.language}</p>
-                <p className="text-sm text-gray-600">Belief: {guest.profile.belief}</p>
+          {chats.map((guest) => (
+            <div 
+              key={guest.id} 
+              onClick={() => setActiveChat(guest.id)}
+              className={`p-4 border-b cursor-pointer transition-colors ${activeChat === guest.id ? 'bg-gray-100 border-l-4 border-l-black' : 'hover:bg-gray-50 border-l-4 border-l-transparent'}`}
+            >
+              <div className="mb-1 flex justify-between items-start">
+                <p className="font-bold text-gray-800">{guest.profile?.name || 'Anonymous'}</p>
+                <span className="text-xs bg-gray-200 px-2 py-1 rounded text-gray-600">{guest.profile?.age} yrs</span>
               </div>
-              <button onClick={() => acceptGuest(guest.guestId)} className="bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 w-full">
-                Accept Connection
-              </button>
+              <p className="text-sm text-gray-600 truncate">{guest.profile?.belief} • {guest.profile?.language}</p>
             </div>
           ))}
-          {queue.length === 0 && (
-            <div className="p-8 text-center text-gray-400">
-              <p>Queue is empty.</p>
-            </div>
-          )}
+          {chats.length === 0 && <div className="p-8 text-center text-gray-400"><p>Inbox is empty.</p></div>}
         </div>
       </div>
 
       <div className="flex-1 flex flex-col bg-white">
         {!activeChat ? (
           <div className="flex-1 flex items-center justify-center text-gray-400 bg-gray-50">
-            <h3 className="text-xl font-medium">Select a guest from the queue to start chatting.</h3>
+            <h3 className="text-xl font-medium">Select a thread to view or reply.</h3>
           </div>
         ) : (
           <div className="flex-1 flex flex-col h-full">
-            <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
-              {messages.map((msg, idx) => (
-                <div key={idx} className={`flex ${msg.senderId === socket.id ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`px-4 py-3 rounded-2xl max-w-[70%] ${msg.senderId === socket.id ? 'bg-black text-white rounded-br-none' : 'bg-white border border-gray-200 rounded-bl-none'}`}>
+            <div className="p-4 border-b border-gray-200 bg-gray-50 font-semibold shadow-sm">Chatting with {chats.find(c => c.id === activeChat)?.profile.name}</div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`px-4 py-3 rounded-2xl max-w-[70%] ${msg.sender === 'admin' ? 'bg-black text-white rounded-br-none' : 'bg-gray-100 border border-gray-200 rounded-bl-none'}`}>
                     {msg.text}
                   </div>
                 </div>
               ))}
-              {messages.length === 0 && (
-                <div className="h-full flex items-center justify-center text-gray-400">
-                  <p>Connection established. Say hello!</p>
-                </div>
-              )}
             </div>
             <form onSubmit={sendMessage} className="p-4 bg-white border-t flex gap-3">
               <input type="text" value={input} onChange={(e) => setInput(e.target.value)} className="flex-1 bg-gray-100 rounded-full px-6 py-3 focus:outline-none" />
