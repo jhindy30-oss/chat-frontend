@@ -1,76 +1,93 @@
 'use client';
 import { useEffect, useState, FormEvent } from 'react';
-import { io } from 'socket.io-client';
-import { Loader2, Send, HeartHandshake } from 'lucide-react';
-import CryptoJS from 'crypto-js';
-
-const socket = io('https://chat-backend-u9kl.onrender.com');
+import { Send, HeartHandshake, Loader2 } from 'lucide-react';
+import { db } from '../../../firebase'; 
+import { collection, doc, setDoc, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 
 interface Message {
+  id: string;
   text: string;
-  senderId: string;
+  sender: 'guest' | 'admin';
 }
 
 export default function GuestScanner({ params }: { params: { source: string } }) {
+  const [guestId, setGuestId] = useState<string | null>(null);
   const [profile, setProfile] = useState({ name: '', age: '', language: '', belief: '' });
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [status, setStatus] = useState('idle');
-  const [roomId, setRoomId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(true);
 
-  // Safeguard: Prevent accidental closing of the tab
+  // 1. Check for returning guests
   useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (status === 'chatting' || status === 'waiting') {
-        e.preventDefault();
-        e.returnValue = ''; 
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [status]);
+    const savedId = localStorage.getItem('hopeline_guest_id');
+    if (savedId) {
+      setGuestId(savedId);
+      setIsSubmitted(true);
+    }
+    setLoading(false);
+  }, []);
 
+  // 2. Listen to Firestore messages once an ID exists
   useEffect(() => {
-    socket.on('chat-started', (data: { roomId: string }) => {
-      setRoomId(data.roomId);
-      setStatus('chatting');
+    if (!guestId || !isSubmitted) return;
+
+    const messagesRef = collection(db, 'chats', guestId, 'messages');
+    const q = query(messagesRef, orderBy('timestamp', 'asc'));
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fetchedMessages = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...(doc.data() as Omit<Message, 'id'>)
+      }));
+      setMessages(fetchedMessages);
     });
 
-    socket.on('receive-message', (message: Message) => {
-      if (!roomId) return;
-      const bytes = CryptoJS.AES.decrypt(message.text, roomId);
-      const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
-      setMessages((prev) => [...prev, { ...message, text: decryptedText }]);
-    });
+    return () => unsubscribe();
+  }, [guestId, isSubmitted]);
 
-    // FIX: Safely remove listeners without disconnecting the entire socket
-    return () => {
-      socket.off('chat-started');
-      socket.off('receive-message');
-    };
-  }, [roomId]);
-
-  const joinQueue = (e: FormEvent) => {
+  const joinQueue = async (e: FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
-    setStatus('waiting');
-    socket.emit('request-agent', { source: params.source, profile });
-  };
-
-  const sendMessage = (e: FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || !roomId) return;
-
-    const encryptedText = CryptoJS.AES.encrypt(input, roomId).toString();
-    const msgData = { roomId, text: encryptedText, senderId: socket.id as string };
+    const newId = crypto.randomUUID();
     
-    socket.emit('send-message', msgData);
-    setMessages((prev) => [...prev, { text: input, senderId: socket.id as string }]);
-    setInput('');
+    // Save to local device memory
+    localStorage.setItem('hopeline_guest_id', newId);
+    setGuestId(newId);
+    
+    // Create the chat room in Firebase
+    await setDoc(doc(db, 'chats', newId), {
+      source: params.source,
+      profile,
+      status: 'active',
+      createdAt: serverTimestamp(),
+      lastMessageAt: serverTimestamp()
+    });
+    
+    setIsSubmitted(true);
   };
 
-  // 1. Hopeline Intake Form
+  const sendMessage = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || !guestId) return;
+    
+    const textToSave = input;
+    setInput(''); // Clear input instantly for UI responsiveness
+
+    await addDoc(collection(db, 'chats', guestId, 'messages'), {
+      text: textToSave,
+      sender: 'guest',
+      timestamp: serverTimestamp()
+    });
+
+    // Update parent doc so it bumps to the top of the admin queue
+    await setDoc(doc(db, 'chats', guestId), { lastMessageAt: serverTimestamp() }, { merge: true });
+  };
+
+  if (loading) {
+     return <div className="h-screen bg-teal-50 flex items-center justify-center"><Loader2 className="animate-spin text-teal-600" size={48} /></div>;
+  }
+
+  // Intake Form
   if (!isSubmitted) {
     return (
       <div className="min-h-screen bg-teal-50 flex items-center justify-center p-4">
@@ -82,12 +99,10 @@ export default function GuestScanner({ params }: { params: { source: string } })
             <h2 className="text-2xl font-bold text-gray-800">Welcome to Hopeline</h2>
             <p className="text-gray-500 text-sm mt-1 text-center">We are here for you. Please share a few details to get started.</p>
           </div>
-          
           <input required type="text" placeholder="Name or Nickname" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full bg-gray-50 p-4 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none text-gray-800 border border-gray-200" />
           <input required type="number" placeholder="Age" value={profile.age} onChange={e => setProfile({...profile, age: e.target.value})} className="w-full bg-gray-50 p-4 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none text-gray-800 border border-gray-200" />
           <input required type="text" placeholder="Preferred Language" value={profile.language} onChange={e => setProfile({...profile, language: e.target.value})} className="w-full bg-gray-50 p-4 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none text-gray-800 border border-gray-200" />
           <input required type="text" placeholder="Belief System" value={profile.belief} onChange={e => setProfile({...profile, belief: e.target.value})} className="w-full bg-gray-50 p-4 rounded-xl focus:ring-2 focus:ring-teal-500 outline-none text-gray-800 border border-gray-200" />
-          
           <button type="submit" className="w-full bg-teal-600 p-4 rounded-xl font-bold text-white hover:bg-teal-700 transition-colors mt-6 shadow-md">
             Connect to Someone
           </button>
@@ -96,18 +111,7 @@ export default function GuestScanner({ params }: { params: { source: string } })
     );
   }
 
-  // 2. Hopeline Waiting Room
-  if (status === 'waiting') {
-    return (
-      <div className="h-screen bg-teal-50 flex flex-col items-center justify-center text-teal-800">
-        <Loader2 className="animate-spin mb-4 text-teal-600" size={48} />
-        <h2 className="text-xl font-semibold">Finding an available connection...</h2>
-        <p className="text-teal-600/70 mt-2">Please keep this window open.</p>
-      </div>
-    );
-  }
-
-  // 3. Hopeline Active Chat
+  // Active Chat
   return (
     <div className="flex flex-col h-screen bg-teal-50 pb-6">
       <div className="p-4 bg-white border-b border-teal-100 shadow-sm flex items-center gap-3">
@@ -116,15 +120,14 @@ export default function GuestScanner({ params }: { params: { source: string } })
         </div>
         <h1 className="font-bold text-xl text-gray-800">Hopeline</h1>
         <div className="ml-auto flex items-center gap-2 text-xs font-medium text-teal-600 bg-teal-50 px-3 py-1 rounded-full">
-          <span className="flex h-2 w-2 rounded-full bg-green-500 animate-pulse"></span>
-          Connected
+          <span className="flex h-2 w-2 rounded-full bg-green-500"></span> Secure
         </div>
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {messages.map((msg, idx) => (
-           <div key={idx} className={`flex ${msg.senderId === socket.id ? 'justify-end' : 'justify-start'}`}>
-             <div className={`px-5 py-3 rounded-2xl max-w-[80%] shadow-sm ${msg.senderId === socket.id ? 'bg-teal-600 text-white rounded-br-none' : 'bg-white text-gray-800 border border-teal-100 rounded-bl-none'}`}>
+        {messages.map((msg) => (
+           <div key={msg.id} className={`flex ${msg.sender === 'guest' ? 'justify-end' : 'justify-start'}`}>
+             <div className={`px-5 py-3 rounded-2xl max-w-[80%] shadow-sm ${msg.sender === 'guest' ? 'bg-teal-600 text-white rounded-br-none' : 'bg-white text-gray-800 border border-teal-100 rounded-bl-none'}`}>
                {msg.text}
              </div>
            </div>
