@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState, FormEvent } from 'react';
 import { Send, HeartHandshake, Loader2 } from 'lucide-react';
-import { db } from '../../../firebase'; 
+import { db } from '../../firebase';
 import { collection, doc, setDoc, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 
 interface Message {
