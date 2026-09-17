@@ -1,7 +1,9 @@
 'use client';
 import { useEffect, useState, FormEvent } from 'react';
 import { Send, HeartHandshake, Loader2 } from 'lucide-react';
-import { db } from '../../firebase';
+
+// IMPORTANT: Adjust the dots in the path below if Vercel fails to find firebase.ts again
+import { db } from '../../firebase'; 
 import { collection, doc, setDoc, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 
 interface Message {
@@ -48,22 +50,31 @@ export default function GuestScanner({ params }: { params: { source: string } })
 
   const joinQueue = async (e: FormEvent) => {
     e.preventDefault();
-    const newId = crypto.randomUUID();
     
-    // Save to local device memory
-    localStorage.setItem('hopeline_guest_id', newId);
-    setGuestId(newId);
-    
-    // Create the chat room in Firebase
-    await setDoc(doc(db, 'chats', newId), {
-      source: params.source,
-      profile,
-      status: 'active',
-      createdAt: serverTimestamp(),
-      lastMessageAt: serverTimestamp()
-    });
-    
-    setIsSubmitted(true);
+    try {
+      // Fallback for older mobile browsers
+      const newId = typeof crypto !== 'undefined' && crypto.randomUUID 
+        ? crypto.randomUUID() 
+        : Date.now().toString();
+      
+      // Save to local device memory
+      localStorage.setItem('hopeline_guest_id', newId);
+      setGuestId(newId);
+      
+      // Create the chat room in Firebase
+      await setDoc(doc(db, 'chats', newId), {
+        source: params.source,
+        profile,
+        status: 'active',
+        createdAt: serverTimestamp(),
+        lastMessageAt: serverTimestamp()
+      });
+      
+      setIsSubmitted(true);
+    } catch (error: any) {
+      // This will instantly reveal why Firebase is failing
+      alert("Database Error: " + error.message);
+    }
   };
 
   const sendMessage = async (e: FormEvent) => {
