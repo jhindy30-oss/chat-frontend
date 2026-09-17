@@ -43,14 +43,22 @@ export default function HostDashboard() {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    socket.emit('register-host');
+    // Prevent re-registering if we are already in a chat
+    if (!activeChat) {
+      socket.emit('register-host');
+    }
 
     socket.on('new-guest-waiting', (guest: Guest) => {
       setQueue((prev) => [...prev, guest]);
       
+      // Play an audible ping
+      const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+      audio.volume = 0.5;
+      audio.play().catch(e => console.log('Audio playback blocked by browser until interacted with'));
+
       // Trigger browser notification
       if (Notification.permission === "granted") {
-        new Notification("New Guest Waiting", {
+        new Notification("New Hopeline Request", {
           body: `${guest.profile.name} (${guest.profile.age}) is waiting to connect.`,
         });
       }
@@ -73,8 +81,12 @@ export default function HostDashboard() {
       setMessages((prev) => [...prev, { ...message, text: decryptedText }]);
     });
 
+    // FIX: Safely remove listeners without disconnecting the entire socket
     return () => {
-      socket.disconnect(); 
+      socket.off('new-guest-waiting');
+      socket.off('queue-update');
+      socket.off('chat-started');
+      socket.off('receive-message');
     };
   }, [isAuthenticated, activeChat]);
 
@@ -131,6 +143,11 @@ export default function HostDashboard() {
               </button>
             </div>
           ))}
+          {queue.length === 0 && (
+            <div className="p-8 text-center text-gray-400">
+              <p>Queue is empty.</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -141,7 +158,6 @@ export default function HostDashboard() {
           </div>
         ) : (
           <div className="flex-1 flex flex-col h-full">
-             {/* Messages UI (Same as before) */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
               {messages.map((msg, idx) => (
                 <div key={idx} className={`flex ${msg.senderId === socket.id ? 'justify-end' : 'justify-start'}`}>
@@ -150,6 +166,11 @@ export default function HostDashboard() {
                   </div>
                 </div>
               ))}
+              {messages.length === 0 && (
+                <div className="h-full flex items-center justify-center text-gray-400">
+                  <p>Connection established. Say hello!</p>
+                </div>
+              )}
             </div>
             <form onSubmit={sendMessage} className="p-4 bg-white border-t flex gap-3">
               <input type="text" value={input} onChange={(e) => setInput(e.target.value)} className="flex-1 bg-gray-100 rounded-full px-6 py-3 focus:outline-none" />
