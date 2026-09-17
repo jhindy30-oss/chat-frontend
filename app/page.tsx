@@ -22,17 +22,20 @@ export default function HostDashboard() {
   const [input, setInput] = useState('');
 
   useEffect(() => {
-    socket.emit('register-host');
+    if (!isAuthenticated) return;
 
-   socket.on('new-guest-waiting', (guest: Guest) => {
+    // Prevent re-registering if we are already in a chat
+    if (!activeChat) {
+      socket.emit('register-host');
+    }
+
+    socket.on('new-guest-waiting', (guest: Guest) => {
       setQueue((prev) => [...prev, guest]);
       
-      // Play an audible ping
       const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
       audio.volume = 0.5;
-      audio.play().catch(e => console.log('Audio playback blocked by browser until interacted with'));
+      audio.play().catch(e => console.log('Audio blocked'));
 
-      // Trigger browser notification
       if (Notification.permission === "granted") {
         new Notification("New Hopeline Request", {
           body: `${guest.profile.name} (${guest.profile.age}) is waiting to connect.`,
@@ -46,17 +49,24 @@ export default function HostDashboard() {
     
     socket.on('chat-started', (data: { roomId: string }) => {
         setActiveChat(data.roomId);
-        setMessages([]); // Clear previous chat history if taking a new guest
+        setMessages([]);
     });
 
     socket.on('receive-message', (message: Message) => {
-      setMessages((prev) => [...prev, message]);
+      if (!activeChat) return;
+      const bytes = CryptoJS.AES.decrypt(message.text, activeChat);
+      const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
+      setMessages((prev) => [...prev, { ...message, text: decryptedText }]);
     });
 
+    // FIX: Safely remove listeners without disconnecting
     return () => {
-      socket.disconnect(); 
+      socket.off('new-guest-waiting');
+      socket.off('queue-update');
+      socket.off('chat-started');
+      socket.off('receive-message');
     };
-  }, []);
+  }, [isAuthenticated, activeChat]);
 
   const acceptGuest = (guestId: string) => {
     socket.emit('accept-guest', guestId);
