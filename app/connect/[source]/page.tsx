@@ -44,8 +44,10 @@ export default function GuestScanner({ params }: { params: { source: string } })
       setMessages((prev) => [...prev, { ...message, text: decryptedText }]);
     });
 
+    // FIX: Remove specific listeners instead of killing the whole connection
     return () => {
-      socket.disconnect();
+      socket.off('chat-started');
+      socket.off('receive-message');
     };
   }, [roomId]);
 
