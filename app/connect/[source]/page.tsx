@@ -2,7 +2,7 @@
 import { useEffect, useState, FormEvent } from 'react';
 import { Send, HeartHandshake, Loader2 } from 'lucide-react';
 
-// IMPORTANT: Adjust the dots in the path below if Vercel fails to find firebase.ts again
+// IMPORTANT: Adjust the dots in the path below if Vercel fails to find firebase.ts
 import { db } from '../../firebase'; 
 import { collection, doc, setDoc, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 
@@ -63,7 +63,7 @@ export default function GuestScanner({ params }: { params: { source: string } })
       
       // Create the chat room in Firebase
       await setDoc(doc(db, 'chats', newId), {
-        source: params.source,
+        source: params?.source || 'web-link', // FIX: Prevents Firebase from crashing if undefined
         profile,
         status: 'active',
         createdAt: serverTimestamp(),
@@ -72,7 +72,6 @@ export default function GuestScanner({ params }: { params: { source: string } })
       
       setIsSubmitted(true);
     } catch (error: any) {
-      // This will instantly reveal why Firebase is failing
       alert("Database Error: " + error.message);
     }
   };
