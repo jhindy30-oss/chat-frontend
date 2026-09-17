@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 
 // Make sure this points to your live Render URL!
-const socket = io('https://your-backend.com'); 
+const socket = io('https://chat-backend-u9kl.onrender.com'); 
 
 // 1. Define the structure of a Guest
 interface Guest {
