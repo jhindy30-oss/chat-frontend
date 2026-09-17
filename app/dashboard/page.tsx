@@ -2,17 +2,14 @@
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 
-// Make sure this points to your live Render URL!
-const socket = io('https://chat-backend-u9kl.onrender.com'); 
+const socket = io('https://your-backend.com'); 
 
-// 1. Define the structure of a Guest
 interface Guest {
   guestId: string;
   source: string;
 }
 
 export default function HostDashboard() {
-  // 2. Apply the Guest type to the state array
   const [queue, setQueue] = useState<Guest[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
 
@@ -31,13 +28,11 @@ export default function HostDashboard() {
         setActiveChat(data.roomId);
     });
 
-    // 3. Prevent returning the Socket object
     return () => {
       socket.disconnect(); 
     };
   }, []);
 
-  // 4. Type the function parameter
   const acceptGuest = (guestId: string) => {
     socket.emit('accept-guest', guestId);
   };
