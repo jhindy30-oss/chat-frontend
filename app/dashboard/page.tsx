@@ -5,7 +5,7 @@ import { collection, doc, addDoc, onSnapshot, query, orderBy, serverTimestamp, s
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 // IMPORTANT: Adjust this path if your firebase.ts file is in a different folder!
-import { db, auth } from '../../firebase'; 
+import { db, auth } from '../firebase'; 
 
 interface Guest {
   id: string;
