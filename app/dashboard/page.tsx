@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useState, FormEvent, useRef } from 'react';
 import { Send, Lock } from 'lucide-react';
-import { db } from '../firebase';
+import { db, auth } from '../../firebase'; // Add auth here
 import { collection, doc, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc } from 'firebase/firestore';
+import { signInWithEmailAndPassword } from 'firebase/auth'; // Add this
 
 interface Guest {
   id: string;
