@@ -1,9 +1,11 @@
 'use client';
 import { useEffect, useState, FormEvent, useRef } from 'react';
 import { Send, Lock } from 'lucide-react';
-import { db, auth } from '../../firebase'; // Add auth here
 import { collection, doc, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc } from 'firebase/firestore';
-import { signInWithEmailAndPassword } from 'firebase/auth'; // Add this
+import { signInWithEmailAndPassword } from 'firebase/auth';
+
+// IMPORTANT: Adjust this path if your firebase.ts file is in a different folder!
+import { db, auth } from '../../firebase'; 
 
 interface Guest {
   id: string;
@@ -36,7 +38,7 @@ export default function HostDashboard() {
     }
   }, []);
 
-  // 1. Global Inbox Listener
+  // Global Inbox Listener
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -51,7 +53,6 @@ export default function HostDashboard() {
       
       setChats(fetchedChats);
 
-      // Trigger alerts if a brand new chat was created
       if (fetchedChats.length > chatListLengthRef.current && chatListLengthRef.current !== 0) {
         const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
         audio.volume = 0.5;
@@ -67,7 +68,7 @@ export default function HostDashboard() {
     return () => unsubscribe();
   }, [isAuthenticated]);
 
-  // 2. Active Chat Listener
+  // Active Chat Listener
   useEffect(() => {
     if (!activeChat) return;
 
@@ -85,7 +86,7 @@ export default function HostDashboard() {
     return () => unsubscribe();
   }, [activeChat]);
 
- const handleLogin = async (e: FormEvent) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -118,7 +119,7 @@ export default function HostDashboard() {
           <Lock size={48} className="mb-4 text-gray-800" />
           <h2 className="text-xl font-bold mb-4">Host Dashboard</h2>
           <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Admin Email" className="w-64 bg-gray-100 p-3 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-black" />
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter Password" className="w-64 bg-gray-100 p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black" />
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" className="w-64 bg-gray-100 p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black" />
           <button type="submit" className="w-full bg-black text-white p-3 rounded-lg font-medium hover:bg-gray-800">Login</button>
         </form>
       </div>
@@ -154,7 +155,7 @@ export default function HostDashboard() {
           </div>
         ) : (
           <div className="flex-1 flex flex-col h-full">
-            <div className="p-4 border-b border-gray-200 bg-gray-50 font-semibold shadow-sm">Chatting with {chats.find(c => c.id === activeChat)?.profile.name}</div>
+            <div className="p-4 border-b border-gray-200 bg-gray-50 font-semibold shadow-sm">Chatting with {chats.find(c => c.id === activeChat)?.profile?.name || 'Guest'}</div>
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
