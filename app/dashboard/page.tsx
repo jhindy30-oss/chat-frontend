@@ -20,6 +20,7 @@ interface Message {
 
 export default function HostDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
   const [chats, setChats] = useState<Guest[]>([]);
@@ -84,10 +85,14 @@ export default function HostDashboard() {
     return () => unsubscribe();
   }, [activeChat]);
 
-  const handleLogin = (e: FormEvent) => {
+ const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-    if (password === 'admin123') setIsAuthenticated(true);
-    else alert('Incorrect password');
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      setIsAuthenticated(true);
+    } catch (error: any) {
+      alert('Login failed: Invalid email or password.');
+    }
   };
 
   const sendMessage = async (e: FormEvent) => {
@@ -112,6 +117,7 @@ export default function HostDashboard() {
         <form onSubmit={handleLogin} className="bg-white p-8 rounded-xl shadow-lg flex flex-col items-center">
           <Lock size={48} className="mb-4 text-gray-800" />
           <h2 className="text-xl font-bold mb-4">Host Dashboard</h2>
+          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Admin Email" className="w-64 bg-gray-100 p-3 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-black" />
           <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Enter Password" className="w-64 bg-gray-100 p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black" />
           <button type="submit" className="w-full bg-black text-white p-3 rounded-lg font-medium hover:bg-gray-800">Login</button>
         </form>
