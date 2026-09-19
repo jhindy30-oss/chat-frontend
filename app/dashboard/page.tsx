@@ -1,10 +1,10 @@
 'use client';
 import { useEffect, useState, FormEvent, useRef } from 'react';
-import { Send, Lock } from 'lucide-react';
+import { Send, Lock, HeartHandshake, UserCircle } from 'lucide-react';
 import { collection, doc, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc } from 'firebase/firestore';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
-// IMPORTANT: Adjust this path if your firebase.ts file is in a different folder!
+// IMPORTANT: Adjust this relative path if needed to match where your firebase.ts lives
 import { db, auth } from '../firebase'; 
 
 interface Guest {
@@ -31,6 +31,16 @@ export default function HostDashboard() {
   const [input, setInput] = useState('');
   
   const chatListLengthRef = useRef(0);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom on new messages in active thread
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
@@ -112,62 +122,147 @@ export default function HostDashboard() {
     await setDoc(doc(db, 'chats', activeChat), { lastMessageAt: serverTimestamp() }, { merge: true });
   };
 
+  const currentGuest = chats.find(c => c.id === activeChat);
+
   if (!isAuthenticated) {
     return (
-      <div className="h-screen bg-gray-50 flex items-center justify-center">
-        <form onSubmit={handleLogin} className="bg-white p-8 rounded-xl shadow-lg flex flex-col items-center">
-          <Lock size={48} className="mb-4 text-gray-800" />
-          <h2 className="text-xl font-bold mb-4">Host Dashboard</h2>
-          <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Admin Email" className="w-64 bg-gray-100 p-3 rounded-lg mb-3 focus:outline-none focus:ring-2 focus:ring-black" />
-          <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" className="w-64 bg-gray-100 p-3 rounded-lg mb-4 focus:outline-none focus:ring-2 focus:ring-black" />
-          <button type="submit" className="w-full bg-black text-white p-3 rounded-lg font-medium hover:bg-gray-800">Login</button>
+      <div className="h-[100dvh] bg-slate-100 flex items-center justify-center p-4">
+        <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center border border-gray-200/80 w-full max-w-sm">
+          <div className="bg-slate-100 p-3 rounded-full mb-3 text-slate-800">
+            <Lock size={32} />
+          </div>
+          <h2 className="text-xl font-bold mb-1 text-gray-900">Host Dashboard</h2>
+          <p className="text-xs text-gray-500 mb-6 text-center">Sign in to manage incoming guest conversations</p>
+          <input 
+            type="email" 
+            required 
+            value={email} 
+            onChange={e => setEmail(e.target.value)} 
+            placeholder="Admin Email" 
+            className="w-full bg-gray-50 p-3 rounded-xl mb-3 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-900" 
+          />
+          <input 
+            type="password" 
+            required 
+            value={password} 
+            onChange={e => setPassword(e.target.value)} 
+            placeholder="Password" 
+            className="w-full bg-gray-50 p-3 rounded-xl mb-5 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-900" 
+          />
+          <button type="submit" className="w-full bg-teal-600 text-white p-3 rounded-xl font-bold text-sm hover:bg-teal-700 transition-colors shadow-sm">
+            Sign In
+          </button>
         </form>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-gray-50 text-gray-900">
-      <div className="w-80 bg-white border-r border-gray-200 flex flex-col shadow-sm z-10">
-        <h2 className="p-4 font-bold text-lg border-b bg-gray-50">Active Threads ({chats.length})</h2>
+    <div className="flex h-[100dvh] bg-slate-100 text-gray-900 overflow-hidden">
+      {/* Sidebar Queue */}
+      <div className="w-80 bg-white border-r border-gray-200 flex flex-col shrink-0 z-10">
+        <div className="p-4 border-b border-gray-200 bg-slate-50/80 flex items-center justify-between">
+          <h2 className="font-bold text-base text-gray-900">Active Threads</h2>
+          <span className="bg-teal-100 text-teal-700 text-xs font-bold px-2.5 py-0.5 rounded-full">
+            {chats.length}
+          </span>
+        </div>
         <div className="flex-1 overflow-y-auto">
-          {chats.map((guest) => (
-            <div 
-              key={guest.id} 
-              onClick={() => setActiveChat(guest.id)}
-              className={`p-4 border-b cursor-pointer transition-colors ${activeChat === guest.id ? 'bg-gray-100 border-l-4 border-l-black' : 'hover:bg-gray-50 border-l-4 border-l-transparent'}`}
-            >
-              <div className="mb-1 flex justify-between items-start">
-                <p className="font-bold text-gray-800">{guest.profile?.name || 'Anonymous'}</p>
-                <span className="text-xs bg-gray-200 px-2 py-1 rounded text-gray-600">{guest.profile?.age} yrs</span>
+          {chats.map((guest) => {
+            const isSelected = activeChat === guest.id;
+            return (
+              <div 
+                key={guest.id} 
+                onClick={() => setActiveChat(guest.id)}
+                className={`p-4 border-b border-gray-100 cursor-pointer transition-colors ${
+                  isSelected 
+                    ? 'bg-teal-50/60 border-l-4 border-l-teal-600' 
+                    : 'hover:bg-slate-50 border-l-4 border-l-transparent'
+                }`}
+              >
+                <div className="mb-1 flex justify-between items-start">
+                  <p className="font-bold text-sm text-gray-900">{guest.profile?.name || 'Anonymous'}</p>
+                  {guest.profile?.age && (
+                    <span className="text-[11px] bg-slate-100 text-slate-600 font-medium px-2 py-0.5 rounded">
+                      {guest.profile.age}y
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 truncate">
+                  {[guest.profile?.language, guest.profile?.belief].filter(Boolean).join(' • ') || 'No intake details'}
+                </p>
               </div>
-              <p className="text-sm text-gray-600 truncate">{guest.profile?.belief} • {guest.profile?.language}</p>
+            );
+          })}
+          {chats.length === 0 && (
+            <div className="p-8 text-center text-gray-400">
+              <p className="text-sm">Inbox is empty.</p>
             </div>
-          ))}
-          {chats.length === 0 && <div className="p-8 text-center text-gray-400"><p>Inbox is empty.</p></div>}
+          )}
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col bg-white">
+      {/* Main Chat Panel */}
+      <div className="flex-1 flex flex-col bg-white h-full overflow-hidden">
         {!activeChat ? (
-          <div className="flex-1 flex items-center justify-center text-gray-400 bg-gray-50">
-            <h3 className="text-xl font-medium">Select a thread to view or reply.</h3>
+          <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-slate-50 p-6">
+            <UserCircle size={48} className="mb-2 stroke-1 text-slate-300" />
+            <h3 className="text-base font-medium text-gray-600">Select a thread to view or reply</h3>
           </div>
         ) : (
-          <div className="flex-1 flex flex-col h-full">
-            <div className="p-4 border-b border-gray-200 bg-gray-50 font-semibold shadow-sm">Chatting with {chats.find(c => c.id === activeChat)?.profile?.name || 'Guest'}</div>
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`px-4 py-3 rounded-2xl max-w-[70%] ${msg.sender === 'admin' ? 'bg-black text-white rounded-br-none' : 'bg-gray-100 border border-gray-200 rounded-bl-none'}`}>
-                    {msg.text}
-                  </div>
-                </div>
-              ))}
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            {/* Header */}
+            <div className="px-6 py-3.5 border-b border-gray-200 bg-slate-50/80 flex items-center justify-between shrink-0">
+              <div>
+                <h2 className="font-bold text-base text-gray-900">{currentGuest?.profile?.name || 'Guest Thread'}</h2>
+                <p className="text-xs text-gray-500">
+                  {[
+                    currentGuest?.profile?.age ? `${currentGuest.profile.age} years old` : null,
+                    currentGuest?.profile?.language,
+                    currentGuest?.profile?.belief,
+                    `Source: ${currentGuest?.source || 'web-link'}`
+                  ].filter(Boolean).join(' • ')}
+                </p>
+              </div>
             </div>
-            <form onSubmit={sendMessage} className="p-4 bg-white border-t flex gap-3">
-              <input type="text" value={input} onChange={(e) => setInput(e.target.value)} className="flex-1 bg-gray-100 rounded-full px-6 py-3 focus:outline-none" />
-              <button type="submit" className="bg-black text-white p-3 rounded-full"><Send size={20} /></button>
+
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-[#e5ddd5]/20">
+              {messages.map((msg) => {
+                const isAdmin = msg.sender === 'admin';
+                return (
+                  <div key={msg.id} className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}>
+                    <div 
+                      className={`px-4 py-2.5 rounded-2xl max-w-[70%] text-sm leading-relaxed shadow-2xs break-words ${
+                        isAdmin 
+                          ? 'bg-slate-900 text-white rounded-br-xs' 
+                          : 'bg-white text-gray-900 border border-gray-200/80 rounded-bl-xs'
+                      }`}
+                    >
+                      {msg.text}
+                    </div>
+                  </div>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input Bar */}
+            <form onSubmit={sendMessage} className="p-4 bg-white border-t border-gray-200 flex items-center gap-3 shrink-0">
+              <input 
+                type="text" 
+                placeholder="Type your response..." 
+                value={input} 
+                onChange={(e) => setInput(e.target.value)} 
+                className="flex-1 bg-gray-100 border border-gray-200 rounded-full px-5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-900 placeholder-gray-400" 
+              />
+              <button 
+                type="submit" 
+                disabled={!input.trim()}
+                className="bg-slate-900 text-white p-2.5 rounded-full hover:bg-black disabled:opacity-40 transition-all shrink-0 active:scale-95 shadow-sm"
+              >
+                <Send size={18} />
+              </button>
             </form>
           </div>
         )}
