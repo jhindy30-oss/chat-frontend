@@ -21,12 +21,12 @@ const translations = {
     agePlace: "Age 🎂",
     langPlace: "Preferred Language 🌍",
     beliefPlace: "Belief System 🕊️",
-    submitBtn: "Find Your Guide ✨",
+    submitBtn: "Find Your Friend ✨",
     chatHeader: "Hopeline 💙",
-    chatSubHeader: "Active Guide 🧭",
+    chatSubHeader: "Active Friend 🧭",
     secureMsg: "Messages are secure and encrypted 🔒",
     chatPlace: "Type a message... ✍️",
-    autoGreet: "Hi there 👋. Thank you for reaching out. A guide has been notified and will be with you shortly to help you find the answers you are looking for."
+    autoGreet: "Hi there 👋. Thank you for reaching out. A friend has been notified and will be with you shortly to help you find the answers you are looking for."
   },
   es: {
     brand: "Hopeline",
@@ -36,12 +36,12 @@ const translations = {
     agePlace: "Edad 🎂",
     langPlace: "Idioma preferido 🌍",
     beliefPlace: "Sistema de creencias 🕊️",
-    submitBtn: "Encuentra tu Guía ✨",
+    submitBtn: "Encuentra tu Amigo ✨",
     chatHeader: "Hopeline 💙",
-    chatSubHeader: "Guía Activo 🧭",
+    chatSubHeader: "Amigo Activo 🧭",
     secureMsg: "Los mensajes son seguros y están encriptados 🔒",
     chatPlace: "Escribe un mensaje... ✍️",
-    autoGreet: "Hola 👋. Gracias por contactarnos. Un guía ha sido notificado y estará contigo en breve para ayudarte a encontrar las respuestas que buscas."
+    autoGreet: "Hola 👋. Gracias por contactarnos. Un amigo ha sido notificado y estará contigo en breve para ayudarte a encontrar las respuestas que buscas."
   },
   ar: {
     brand: "هوب لاين",
@@ -51,12 +51,12 @@ const translations = {
     agePlace: "العمر 🎂",
     langPlace: "اللغة المفضلة 🌍",
     beliefPlace: "المعتقد أو الدين 🕊️",
-    submitBtn: "ابحث عن دليلك ✨",
+    submitBtn: "ابحث عن صديقك ✨",
     chatHeader: "هوب لاين 💙",
-    chatSubHeader: "دليل نشط 🧭",
+    chatSubHeader: "صديق نشط 🧭",
     secureMsg: "الرسائل آمنة ومشفرة 🔒",
     chatPlace: "اكتب رسالة... ✍️",
-    autoGreet: "أهلاً بك 👋. شكرًا لتواصلك معنا. تم إبلاغ الدليل وسيكون معك قريبًا لمساعدتك في العثور على الإجابات التي تبحث عنها."
+    autoGreet: "أهلاً بك 👋. شكرًا لتواصلك معنا. تم إبلاغ صديق وسيكون معك قريبًا لمساعدتك في العثور على الإجابات التي تبحث عنها."
   },
   ur: {
     brand: "ہوپ لائن",
@@ -66,12 +66,12 @@ const translations = {
     agePlace: "عمر 🎂",
     langPlace: "پسندیدہ زبان 🌍",
     beliefPlace: "عقیدہ یا مذہب 🕊️",
-    submitBtn: "اپنا رہنما تلاش کریں ✨",
+    submitBtn: "اپنا دوست تلاش کریں ✨",
     chatHeader: "ہوپ لائن 💙",
-    chatSubHeader: "فعال رہنما 🧭",
+    chatSubHeader: "فعال دوست 🧭",
     secureMsg: "پیغامات محفوظ اور انکرپٹڈ ہیں 🔒",
     chatPlace: "پیغام لکھیں... ✍️",
-    autoGreet: "ہیلو 👋۔ ہم سے رابطہ کرنے کا شکریہ۔ ایک رہنما کو مطلع کر دیا گیا ہے اور وہ جلد ہی آپ کے ساتھ ہوں گے تاکہ آپ کو وہ جوابات تلاش کرنے میں مدد مل سکے جو آپ ڈھونڈ رہے ہیں۔"
+    autoGreet: "ہیلو 👋۔ ہم سے رابطہ کرنے کا شکریہ۔ ایک دوست کو مطلع کر دیا گیا ہے اور وہ جلد ہی آپ کے ساتھ ہوں گے تاکہ آپ کو وہ جوابات تلاش کرنے میں مدد مل سکے جو آپ ڈھونڈ رہے ہیں۔"
   }
 };
 
