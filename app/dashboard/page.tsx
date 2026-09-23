@@ -48,7 +48,6 @@ export default function HostDashboard() {
     }
   }, []);
 
-  // 1. Global Inbox Listener & Tab Notifications
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -75,17 +74,14 @@ export default function HostDashboard() {
     return () => unsubscribe();
   }, [isAuthenticated]);
 
-  // 2. Active Chat Listener & Reset Unread
   useEffect(() => {
     if (!activeChat) return;
 
-    // Reset unread count when opening a chat
     setDoc(doc(db, 'chats', activeChat), { unreadByAdmin: 0 }, { merge: true });
 
     const q = query(collection(db, 'chats', activeChat, 'messages'), orderBy('timestamp', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as Omit<Message, 'id'>) })));
-      // Reset unread again if we are actively viewing while a new message arrives
       setDoc(doc(db, 'chats', activeChat), { unreadByAdmin: 0 }, { merge: true });
     });
 
@@ -125,7 +121,9 @@ export default function HostDashboard() {
       timestamp: serverTimestamp()
     });
 
+    // Automatically remove the 'new' status once the host sends a reply
     await setDoc(doc(db, 'chats', activeChat), { 
+      status: 'active', 
       lastMessageAt: serverTimestamp(),
       unreadByGuest: increment(1),
       adminTyping: false
@@ -159,7 +157,9 @@ export default function HostDashboard() {
         <div className="flex-1 overflow-y-auto">
           {chats.map((guest) => {
             const isSelected = activeChat === guest.id;
+            const isNew = guest.status === 'new';
             const hasUnread = (guest.unreadByAdmin || 0) > 0;
+            
             return (
               <div 
                 key={guest.id} 
@@ -167,7 +167,14 @@ export default function HostDashboard() {
                 className={`p-4 border-b border-gray-100 cursor-pointer transition-colors relative ${isSelected ? 'bg-teal-50/60 border-l-4 border-l-teal-600' : 'hover:bg-slate-50 border-l-4 border-l-transparent'}`}
               >
                 <div className="mb-1 flex justify-between items-start">
-                  <p className={`text-sm ${hasUnread ? 'font-bold text-black' : 'font-medium text-gray-700'}`}>{guest.profile?.name || 'Anonymous'}</p>
+                  <div className="flex items-center gap-2">
+                    <p className={`text-sm ${hasUnread || isNew ? 'font-bold text-black' : 'font-medium text-gray-700'}`}>
+                      {guest.profile?.name || 'Anonymous'}
+                    </p>
+                    {isNew && (
+                      <span className="bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm">New</span>
+                    )}
+                  </div>
                   {hasUnread && <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">{guest.unreadByAdmin}</span>}
                 </div>
                 <p className={`text-xs truncate ${hasUnread ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
