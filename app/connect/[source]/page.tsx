@@ -12,6 +12,22 @@ interface Message {
   sender: 'guest' | 'admin';
 }
 
+// Helper function to make URLs clickable
+const renderMessageText = (text: string) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80 break-all">
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export default function GuestScanner({ params }: { params: { source: string } }) {
   const [guestId, setGuestId] = useState<string | null>(null);
   const [profile, setProfile] = useState({ name: '', age: '', language: '', belief: '' });
@@ -111,7 +127,6 @@ export default function GuestScanner({ params }: { params: { source: string } })
         unreadByGuest: 0
       });
 
-      // Updated automated greeting to match the new marketing angle
       await addDoc(collection(db, 'chats', newId, 'messages'), {
         text: "Hi there. Thank you for reaching out. A guide has been notified and will be with you shortly to help you find the answers you are looking for.",
         sender: 'admin',
@@ -191,8 +206,8 @@ export default function GuestScanner({ params }: { params: { source: string } })
 
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.sender === 'guest' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`px-4 py-2.5 rounded-2xl max-w-[82%] text-sm leading-relaxed shadow-2xs break-words ${msg.sender === 'guest' ? 'bg-sky-500 text-white rounded-br-xs' : 'bg-white text-gray-800 border border-gray-200/80 rounded-bl-xs'}`}>
-              {msg.text}
+            <div className={`px-4 py-2.5 rounded-2xl max-w-[82%] text-sm leading-relaxed shadow-2xs break-words select-text ${msg.sender === 'guest' ? 'bg-sky-500 text-white rounded-br-xs' : 'bg-white text-gray-800 border border-gray-200/80 rounded-bl-xs'}`}>
+              {renderMessageText(msg.text)}
             </div>
           </div>
         ))}
