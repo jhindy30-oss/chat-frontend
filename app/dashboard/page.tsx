@@ -231,5 +231,3 @@ export default function HostDashboard() {
     </div>
   );
 }
-
-```
