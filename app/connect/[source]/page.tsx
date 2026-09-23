@@ -29,7 +29,6 @@ export default function GuestScanner({ params }: { params: { source: string } })
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // 1. Check for returning guests
   useEffect(() => {
     const savedId = localStorage.getItem('hopeline_guest_id');
     if (savedId) {
@@ -39,11 +38,9 @@ export default function GuestScanner({ params }: { params: { source: string } })
     setLoading(false);
   }, []);
 
-  // 2. Listen to Firestore messages and host typing status
   useEffect(() => {
     if (!guestId || !isSubmitted) return;
 
-    // Listen to messages
     const messagesRef = collection(db, 'chats', guestId, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'asc'));
     const unsubMessages = onSnapshot(q, (snapshot) => {
@@ -54,13 +51,11 @@ export default function GuestScanner({ params }: { params: { source: string } })
       setMessages(fetchedMessages);
     });
 
-    // Listen to parent chat doc for typing status & reset unread
     const unsubDoc = onSnapshot(doc(db, 'chats', guestId), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setIsHostTyping(data.adminTyping || false);
         
-        // Clear unread count when guest is viewing
         if (data.unreadByGuest > 0) {
           setDoc(doc(db, 'chats', guestId), { unreadByGuest: 0 }, { merge: true });
         }
@@ -73,13 +68,12 @@ export default function GuestScanner({ params }: { params: { source: string } })
     };
   }, [guestId, isSubmitted]);
 
-  // 3. Trigger haptics and sounds on new host messages
   useEffect(() => {
     if (messages.length > previousMessageCount.current && messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
       if (lastMsg.sender === 'admin') {
         if (typeof navigator !== 'undefined' && navigator.vibrate) {
-          navigator.vibrate([100, 30, 100]); // Haptic feedback
+          navigator.vibrate([100, 30, 100]); 
         }
         const audio = new Audio('https://actions.google.com/sounds/v1/water/water_drop.ogg');
         audio.volume = 0.4;
@@ -107,15 +101,24 @@ export default function GuestScanner({ params }: { params: { source: string } })
       localStorage.setItem('hopeline_guest_id', newId);
       setGuestId(newId);
       
+      // 1. Create the chat flagged as "new" with 1 unread notification for the admin
       await setDoc(doc(db, 'chats', newId), {
         source: params?.source || 'web-link',
         profile,
-        status: 'active',
+        status: 'new',
         createdAt: serverTimestamp(),
         lastMessageAt: serverTimestamp(),
-        unreadByAdmin: 0,
+        unreadByAdmin: 1, 
         unreadByGuest: 0
       });
+
+      // 2. Automatically inject the greeting message
+      await addDoc(collection(db, 'chats', newId, 'messages'), {
+        text: "Hi there. Thank you for reaching out to Hopeline. An advocate has been notified and will be with you shortly.",
+        sender: 'admin',
+        timestamp: serverTimestamp()
+      });
+
       setIsSubmitted(true);
     } catch (error: any) {
       alert("Database Error: " + error.message);
