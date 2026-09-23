@@ -1,3 +1,10 @@
+Here is the updated code for `app/dashboard/page.tsx`.
+
+I have replaced the dark slates and teals with the same bright `sky` blue palette used on the guest side. Now, whenever you (the admin) send a message, your chat bubbles will appear in that friendly blue (just like sending an iMessage), and all the accents, focus rings, and selection highlights match the new warmer theme.
+
+Make sure the path on **Line 8** still correctly points to your `firebase.ts` file!
+
+```tsx
 'use client';
 import { useEffect, useState, FormEvent, useRef } from 'react';
 import { Send, Lock, UserCircle } from 'lucide-react';
@@ -121,7 +128,6 @@ export default function HostDashboard() {
       timestamp: serverTimestamp()
     });
 
-    // Automatically remove the 'new' status once the host sends a reply
     await setDoc(doc(db, 'chats', activeChat), { 
       status: 'active', 
       lastMessageAt: serverTimestamp(),
@@ -134,25 +140,25 @@ export default function HostDashboard() {
 
   if (!isAuthenticated) {
     return (
-      <div className="h-[100dvh] bg-slate-100 flex items-center justify-center p-4">
-        <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center border border-gray-200/80 w-full max-w-sm">
-          <div className="bg-slate-100 p-3 rounded-full mb-3 text-slate-800"><Lock size={32} /></div>
+      <div className="h-[100dvh] bg-slate-50 flex items-center justify-center p-4">
+        <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center border border-sky-100 w-full max-w-sm">
+          <div className="bg-sky-100 p-3 rounded-full mb-3 text-sky-600"><Lock size={32} /></div>
           <h2 className="text-xl font-bold mb-1 text-gray-900">Host Dashboard</h2>
           <p className="text-xs text-gray-500 mb-6 text-center">Sign in to manage incoming guest conversations</p>
-          <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Admin Email" className="w-full bg-gray-50 p-3 rounded-xl mb-3 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-900" />
-          <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" className="w-full bg-gray-50 p-3 rounded-xl mb-5 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-900" />
-          <button type="submit" className="w-full bg-teal-600 text-white p-3 rounded-xl font-bold text-sm hover:bg-teal-700 transition-colors shadow-sm">Sign In</button>
+          <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Admin Email" className="w-full bg-gray-50 p-3 rounded-xl mb-3 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-gray-900" />
+          <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Password" className="w-full bg-gray-50 p-3 rounded-xl mb-5 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-gray-900" />
+          <button type="submit" className="w-full bg-sky-500 text-white p-3 rounded-xl font-bold text-sm hover:bg-sky-600 transition-colors shadow-sm">Sign In</button>
         </form>
       </div>
     );
   }
 
   return (
-    <div className="flex h-[100dvh] bg-slate-100 text-gray-900 overflow-hidden">
+    <div className="flex h-[100dvh] bg-slate-50 text-gray-900 overflow-hidden">
       <div className="w-80 bg-white border-r border-gray-200 flex flex-col shrink-0 z-10">
         <div className="p-4 border-b border-gray-200 bg-slate-50/80 flex items-center justify-between">
           <h2 className="font-bold text-base text-gray-900">Active Threads</h2>
-          <span className="bg-teal-100 text-teal-700 text-xs font-bold px-2.5 py-0.5 rounded-full">{chats.length}</span>
+          <span className="bg-sky-100 text-sky-700 text-xs font-bold px-2.5 py-0.5 rounded-full">{chats.length}</span>
         </div>
         <div className="flex-1 overflow-y-auto">
           {chats.map((guest) => {
@@ -164,7 +170,7 @@ export default function HostDashboard() {
               <div 
                 key={guest.id} 
                 onClick={() => setActiveChat(guest.id)}
-                className={`p-4 border-b border-gray-100 cursor-pointer transition-colors relative ${isSelected ? 'bg-teal-50/60 border-l-4 border-l-teal-600' : 'hover:bg-slate-50 border-l-4 border-l-transparent'}`}
+                className={`p-4 border-b border-gray-100 cursor-pointer transition-colors relative ${isSelected ? 'bg-sky-50/60 border-l-4 border-l-sky-500' : 'hover:bg-slate-50 border-l-4 border-l-transparent'}`}
               >
                 <div className="mb-1 flex justify-between items-start">
                   <div className="flex items-center gap-2">
@@ -178,7 +184,7 @@ export default function HostDashboard() {
                   {hasUnread && <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">{guest.unreadByAdmin}</span>}
                 </div>
                 <p className={`text-xs truncate ${hasUnread ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
-                  {guest.guestTyping ? <span className="text-teal-600 italic">Typing...</span> : ([guest.profile?.language, guest.profile?.belief].filter(Boolean).join(' • ') || 'No intake details')}
+                  {guest.guestTyping ? <span className="text-sky-500 italic">Typing...</span> : ([guest.profile?.language, guest.profile?.belief].filter(Boolean).join(' • ') || 'No intake details')}
                 </p>
               </div>
             );
@@ -201,10 +207,10 @@ export default function HostDashboard() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-[#e5ddd5]/20">
+            <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-[#f0f4f8]">
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`px-4 py-2.5 rounded-2xl max-w-[70%] text-sm leading-relaxed shadow-2xs break-words ${msg.sender === 'admin' ? 'bg-slate-900 text-white rounded-br-xs' : 'bg-white text-gray-900 border border-gray-200/80 rounded-bl-xs'}`}>
+                  <div className={`px-4 py-2.5 rounded-2xl max-w-[70%] text-sm leading-relaxed shadow-2xs break-words ${msg.sender === 'admin' ? 'bg-sky-500 text-white rounded-br-xs' : 'bg-white text-gray-900 border border-gray-200/80 rounded-bl-xs'}`}>
                     {msg.text}
                   </div>
                 </div>
@@ -223,8 +229,8 @@ export default function HostDashboard() {
             </div>
 
             <form onSubmit={sendMessage} className="p-4 bg-white border-t border-gray-200 flex items-center gap-3 shrink-0">
-              <input type="text" placeholder="Type your response..." value={input} onChange={(e) => { setInput(e.target.value); handleTyping(); }} className="flex-1 bg-gray-100 border border-gray-200 rounded-full px-5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 text-gray-900 placeholder-gray-400" />
-              <button type="submit" disabled={!input.trim()} className="bg-slate-900 text-white p-2.5 rounded-full hover:bg-black disabled:opacity-40 transition-all shrink-0 active:scale-95 shadow-sm"><Send size={18} /></button>
+              <input type="text" placeholder="Type your response..." value={input} onChange={(e) => { setInput(e.target.value); handleTyping(); }} className="flex-1 bg-gray-100 border border-gray-200 rounded-full px-5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-gray-900 placeholder-gray-400" />
+              <button type="submit" disabled={!input.trim()} className="bg-sky-500 text-white p-2.5 rounded-full hover:bg-sky-600 disabled:opacity-40 transition-all shrink-0 active:scale-95 shadow-sm"><Send size={18} /></button>
             </form>
           </div>
         )}
@@ -232,3 +238,5 @@ export default function HostDashboard() {
     </div>
   );
 }
+
+```
