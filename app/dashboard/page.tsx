@@ -1,10 +1,3 @@
-Here is the updated code for `app/dashboard/page.tsx`.
-
-I have replaced the dark slates and teals with the same bright `sky` blue palette used on the guest side. Now, whenever you (the admin) send a message, your chat bubbles will appear in that friendly blue (just like sending an iMessage), and all the accents, focus rings, and selection highlights match the new warmer theme.
-
-Make sure the path on **Line 8** still correctly points to your `firebase.ts` file!
-
-```tsx
 'use client';
 import { useEffect, useState, FormEvent, useRef } from 'react';
 import { Send, Lock, UserCircle } from 'lucide-react';
