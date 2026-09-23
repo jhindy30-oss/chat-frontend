@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, FormEvent, useRef } from 'react';
-import { Send, HeartHandshake, Loader2 } from 'lucide-react';
+import { Send, HeartHandshake, Loader2, Globe } from 'lucide-react';
 
 // IMPORTANT: Ensure this path matches where your firebase.ts is located
 import { db } from '../../firebase'; 
@@ -12,7 +12,56 @@ interface Message {
   sender: 'guest' | 'admin';
 }
 
-// Helper function to make URLs clickable
+const translations = {
+  en: {
+    brand: "Hopeline",
+    slogan: "The answers you are looking for.",
+    instructions: "Share a few details below to get started 👇",
+    namePlace: "Name or Nickname 👤",
+    agePlace: "Age 🎂",
+    langPlace: "Preferred Language 🌍",
+    beliefPlace: "Belief System 🕊️",
+    submitBtn: "Find Your Guide ✨",
+    chatHeader: "Hopeline 💙",
+    chatSubHeader: "Active Guide 🧭",
+    secureMsg: "Messages are secure and encrypted 🔒",
+    chatPlace: "Type a message... ✍️",
+    autoGreet: "Hi there 👋. Thank you for reaching out. A guide has been notified and will be with you shortly to help you find the answers you are looking for."
+  },
+  es: {
+    brand: "Hopeline",
+    slogan: "Las respuestas que estás buscando.",
+    instructions: "Comparte algunos detalles a continuación para comenzar 👇",
+    namePlace: "Nombre o Apodo 👤",
+    agePlace: "Edad 🎂",
+    langPlace: "Idioma preferido 🌍",
+    beliefPlace: "Sistema de creencias 🕊️",
+    submitBtn: "Encuentra tu Guía ✨",
+    chatHeader: "Hopeline 💙",
+    chatSubHeader: "Guía Activo 🧭",
+    secureMsg: "Los mensajes son seguros y están encriptados 🔒",
+    chatPlace: "Escribe un mensaje... ✍️",
+    autoGreet: "Hola 👋. Gracias por contactarnos. Un guía ha sido notificado y estará contigo en breve para ayudarte a encontrar las respuestas que buscas."
+  },
+  ar: {
+    brand: "هوب لاين",
+    slogan: "الإجابات التي تبحث عنها.",
+    instructions: "شارك بعض التفاصيل أدناه للبدء 👇",
+    namePlace: "الاسم أو اللقب 👤",
+    agePlace: "العمر 🎂",
+    langPlace: "اللغة المفضلة 🌍",
+    beliefPlace: "المعتقد أو الدين 🕊️",
+    submitBtn: "ابحث عن دليلك ✨",
+    chatHeader: "هوب لاين 💙",
+    chatSubHeader: "دليل نشط 🧭",
+    secureMsg: "الرسائل آمنة ومشفرة 🔒",
+    chatPlace: "اكتب رسالة... ✍️",
+    autoGreet: "أهلاً بك 👋. شكرًا لتواصلك معنا. تم إبلاغ الدليل وسيكون معك قريبًا لمساعدتك في العثور على الإجابات التي تبحث عنها."
+  }
+};
+
+type LangKey = 'en' | 'es' | 'ar';
+
 const renderMessageText = (text: string) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
   const parts = text.split(urlRegex);
@@ -29,6 +78,7 @@ const renderMessageText = (text: string) => {
 };
 
 export default function GuestScanner({ params }: { params: { source: string } }) {
+  const [selectedLang, setSelectedLang] = useState<LangKey | null>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
   const [profile, setProfile] = useState({ name: '', age: '', language: '', belief: '' });
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -47,6 +97,8 @@ export default function GuestScanner({ params }: { params: { source: string } })
 
   useEffect(() => {
     const savedId = localStorage.getItem('hopeline_guest_id');
+    const savedLang = localStorage.getItem('hopeline_lang') as LangKey;
+    if (savedLang) setSelectedLang(savedLang);
     if (savedId) {
       setGuestId(savedId);
       setIsSubmitted(true);
@@ -60,40 +112,27 @@ export default function GuestScanner({ params }: { params: { source: string } })
     const messagesRef = collection(db, 'chats', guestId, 'messages');
     const q = query(messagesRef, orderBy('timestamp', 'asc'));
     const unsubMessages = onSnapshot(q, (snapshot) => {
-      const fetchedMessages = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...(doc.data() as Omit<Message, 'id'>)
-      }));
-      setMessages(fetchedMessages);
+      setMessages(snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as Omit<Message, 'id'>) })));
     });
 
     const unsubDoc = onSnapshot(doc(db, 'chats', guestId), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
         setIsHostTyping(data.adminTyping || false);
-        
-        if (data.unreadByGuest > 0) {
-          setDoc(doc(db, 'chats', guestId), { unreadByGuest: 0 }, { merge: true });
-        }
+        if (data.unreadByGuest > 0) setDoc(doc(db, 'chats', guestId), { unreadByGuest: 0 }, { merge: true });
       }
     });
 
-    return () => {
-      unsubMessages();
-      unsubDoc();
-    };
+    return () => { unsubMessages(); unsubDoc(); };
   }, [guestId, isSubmitted]);
 
   useEffect(() => {
     if (messages.length > previousMessageCount.current && messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
       if (lastMsg.sender === 'admin') {
-        if (typeof navigator !== 'undefined' && navigator.vibrate) {
-          navigator.vibrate([100, 30, 100]); 
-        }
+        if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([100, 30, 100]); 
         const audio = new Audio('https://actions.google.com/sounds/v1/water/water_drop.ogg');
-        audio.volume = 0.4;
-        audio.play().catch(() => {});
+        audio.volume = 0.4; audio.play().catch(() => {});
       }
     }
     previousMessageCount.current = messages.length;
@@ -110,6 +149,11 @@ export default function GuestScanner({ params }: { params: { source: string } })
     }, 2000);
   };
 
+  const selectLanguage = (lang: LangKey) => {
+    setSelectedLang(lang);
+    localStorage.setItem('hopeline_lang', lang);
+  };
+
   const joinQueue = async (e: FormEvent) => {
     e.preventDefault();
     try {
@@ -120,6 +164,7 @@ export default function GuestScanner({ params }: { params: { source: string } })
       await setDoc(doc(db, 'chats', newId), {
         source: params?.source || 'web-link',
         profile,
+        appLanguage: selectedLang,
         status: 'new',
         createdAt: serverTimestamp(),
         lastMessageAt: serverTimestamp(),
@@ -128,7 +173,7 @@ export default function GuestScanner({ params }: { params: { source: string } })
       });
 
       await addDoc(collection(db, 'chats', newId, 'messages'), {
-        text: "Hi there. Thank you for reaching out. A guide has been notified and will be with you shortly to help you find the answers you are looking for.",
+        text: translations[selectedLang!].autoGreet,
         sender: 'admin',
         timestamp: serverTimestamp()
       });
@@ -163,45 +208,68 @@ export default function GuestScanner({ params }: { params: { source: string } })
      return <div className="h-[100dvh] bg-sky-50 flex items-center justify-center"><Loader2 className="animate-spin text-sky-500" size={48} /></div>;
   }
 
-  if (!isSubmitted) {
+  // 1. Language Selection Screen
+  if (!selectedLang) {
     return (
       <div className="h-[100dvh] bg-sky-50 flex items-center justify-center p-4">
+        <div className="bg-white p-8 rounded-3xl w-full max-w-sm shadow-xl flex flex-col gap-4 text-center border border-sky-100">
+          <Globe size={48} className="text-sky-500 mx-auto mb-2" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">
+            Choose your language<br/>
+            <span className="text-base text-gray-500 font-medium mt-1 block">Elige tu idioma / اختر لغتك</span>
+          </h2>
+          <button onClick={() => selectLanguage('en')} className="w-full bg-sky-50 p-4 rounded-2xl font-bold text-sky-700 hover:bg-sky-100 transition-colors border border-sky-200">English 🇺🇸🇬🇧</button>
+          <button onClick={() => selectLanguage('es')} className="w-full bg-sky-50 p-4 rounded-2xl font-bold text-sky-700 hover:bg-sky-100 transition-colors border border-sky-200">Español 🇪🇸</button>
+          <button onClick={() => selectLanguage('ar')} className="w-full bg-sky-50 p-4 rounded-2xl font-bold text-sky-700 hover:bg-sky-100 transition-colors border border-sky-200" dir="rtl">العربية 🇸🇦</button>
+        </div>
+      </div>
+    );
+  }
+
+  const t = translations[selectedLang];
+  const isRtl = selectedLang === 'ar';
+
+  // 2. Intake Form Screen
+  if (!isSubmitted) {
+    return (
+      <div className="h-[100dvh] bg-sky-50 flex items-center justify-center p-4" dir={isRtl ? 'rtl' : 'ltr'}>
         <form onSubmit={joinQueue} className="bg-white p-6 rounded-3xl w-full max-w-md shadow-xl space-y-4 border border-sky-100">
           <div className="flex flex-col items-center mb-4 text-center">
             <div className="bg-sky-100 p-3 rounded-full mb-3 text-sky-600">
               <HeartHandshake size={32} />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Hopeline</h2>
-            <p className="text-sky-600 font-medium text-sm mt-1">The answers you are looking for.</p>
-            <p className="text-gray-500 text-xs mt-3">Share a few details below to get started.</p>
+            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">{t.brand} 👋</h2>
+            <p className="text-sky-600 font-medium text-sm mt-1">{t.slogan}</p>
+            <p className="text-gray-500 text-xs mt-3">{t.instructions}</p>
           </div>
-          <input required type="text" placeholder="Name or Nickname" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
-          <input required type="number" placeholder="Age" value={profile.age} onChange={e => setProfile({...profile, age: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
-          <input required type="text" placeholder="Preferred Language" value={profile.language} onChange={e => setProfile({...profile, language: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
-          <input required type="text" placeholder="Belief System" value={profile.belief} onChange={e => setProfile({...profile, belief: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
-          <button type="submit" className="w-full bg-sky-500 p-3.5 rounded-xl font-bold text-white hover:bg-sky-600 transition-colors mt-4 shadow-md text-sm">Find Your Guide</button>
+          <input required type="text" placeholder={t.namePlace} value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
+          <input required type="number" placeholder={t.agePlace} value={profile.age} onChange={e => setProfile({...profile, age: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
+          <input required type="text" placeholder={t.langPlace} value={profile.language} onChange={e => setProfile({...profile, language: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
+          <input required type="text" placeholder={t.beliefPlace} value={profile.belief} onChange={e => setProfile({...profile, belief: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
+          <button type="submit" className="w-full bg-sky-500 p-3.5 rounded-xl font-bold text-white hover:bg-sky-600 transition-colors mt-4 shadow-md text-sm">{t.submitBtn}</button>
         </form>
       </div>
     );
   }
 
+  // 3. Active Chat Screen
   return (
-    <div className="flex flex-col h-[100dvh] bg-slate-50 overflow-hidden select-none">
+    <div className="flex flex-col h-[100dvh] bg-slate-50 overflow-hidden select-none" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="px-4 py-3 bg-white border-b border-gray-200 shadow-sm flex items-center gap-3 shrink-0 z-10">
         <div className="bg-sky-500 text-white p-2 rounded-full flex items-center justify-center">
           <HeartHandshake size={20} />
         </div>
         <div>
-          <h1 className="font-bold text-base text-gray-900 leading-tight">Hopeline</h1>
+          <h1 className="font-bold text-base text-gray-900 leading-tight">{t.chatHeader}</h1>
           <p className="text-xs text-sky-600 flex items-center gap-1 font-medium">
-            <span className="inline-block w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span> Active Guide
+            <span className="inline-block w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span> {t.chatSubHeader}
           </p>
         </div>
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f0f4f8]">
         <div className="text-center my-2">
-          <span className="bg-white/80 border border-gray-200/60 text-gray-500 text-[11px] px-3 py-1 rounded-full font-medium shadow-2xs">Messages are secure and encrypted</span>
+          <span className="bg-white/80 border border-gray-200/60 text-gray-500 text-[11px] px-3 py-1 rounded-full font-medium shadow-2xs">{t.secureMsg}</span>
         </div>
 
         {messages.map((msg) => (
@@ -227,13 +295,13 @@ export default function GuestScanner({ params }: { params: { source: string } })
       <form onSubmit={sendMessage} className="p-3 bg-white border-t border-gray-200 flex items-center gap-2 shrink-0 shadow-lg">
         <input 
           type="text" 
-          placeholder="Type a message..." 
+          placeholder={t.chatPlace} 
           value={input} 
           onChange={(e) => { setInput(e.target.value); handleTyping(); }} 
           className="flex-1 bg-gray-100 border border-gray-200 rounded-full px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-gray-900 placeholder-gray-400" 
         />
         <button type="submit" disabled={!input.trim()} className="bg-sky-500 text-white p-2.5 rounded-full hover:bg-sky-600 disabled:opacity-40 transition-all shrink-0 active:scale-95 shadow-sm">
-          <Send size={18} />
+          <Send size={18} className={isRtl ? 'rotate-180' : ''} />
         </button>
       </form>
     </div>
