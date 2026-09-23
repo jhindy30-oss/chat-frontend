@@ -10,7 +10,7 @@ import { db, auth } from '../firebase';
 interface Guest {
   id: string;
   source: string;
-  appLanguage?: 'en' | 'es' | 'ar';
+  appLanguage?: 'en' | 'es' | 'ar' | 'ur';
   profile: { name: string; age: string; language: string; belief: string; };
   status: string;
   unreadByAdmin?: number;
@@ -41,6 +41,7 @@ const renderMessageText = (text: string) => {
 const getFlag = (lang?: string) => {
   if (lang === 'es') return '🇪🇸';
   if (lang === 'ar') return '🇸🇦';
+  if (lang === 'ur') return '🇵🇰';
   return '🇺🇸';
 };
 
@@ -225,7 +226,7 @@ export default function HostDashboard() {
 
             <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-[#f0f4f8]">
               {messages.map((msg) => {
-                const isRTL = currentGuest?.appLanguage === 'ar' && msg.sender === 'guest';
+                const isRTL = (currentGuest?.appLanguage === 'ar' || currentGuest?.appLanguage === 'ur') && msg.sender === 'guest';
                 return (
                   <div key={msg.id} className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
                     <div dir={isRTL ? 'rtl' : 'ltr'} className={`px-4 py-2.5 rounded-2xl max-w-[70%] text-sm leading-relaxed shadow-2xs break-words select-text ${msg.sender === 'admin' ? 'bg-sky-500 text-white rounded-br-xs' : 'bg-white text-gray-900 border border-gray-200/80 rounded-bl-xs'}`}>
