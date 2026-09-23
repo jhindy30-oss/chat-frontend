@@ -111,8 +111,9 @@ export default function GuestScanner({ params }: { params: { source: string } })
         unreadByGuest: 0
       });
 
+      // Updated automated greeting to match the new marketing angle
       await addDoc(collection(db, 'chats', newId, 'messages'), {
-        text: "Hi there. Thank you for reaching out to Hopeline. An advocate has been notified and will be with you shortly.",
+        text: "Hi there. Thank you for reaching out. A guide has been notified and will be with you shortly to help you find the answers you are looking for.",
         sender: 'admin',
         timestamp: serverTimestamp()
       });
@@ -151,18 +152,19 @@ export default function GuestScanner({ params }: { params: { source: string } })
     return (
       <div className="h-[100dvh] bg-sky-50 flex items-center justify-center p-4">
         <form onSubmit={joinQueue} className="bg-white p-6 rounded-3xl w-full max-w-md shadow-xl space-y-4 border border-sky-100">
-          <div className="flex flex-col items-center mb-4">
-            <div className="bg-sky-100 p-3 rounded-full mb-2 text-sky-600">
-              <HeartHandshake size={28} />
+          <div className="flex flex-col items-center mb-4 text-center">
+            <div className="bg-sky-100 p-3 rounded-full mb-3 text-sky-600">
+              <HeartHandshake size={32} />
             </div>
-            <h2 className="text-xl font-bold text-gray-800">Welcome to Hopeline</h2>
-            <p className="text-gray-500 text-xs mt-1 text-center">We are here for you. Share a few details to get started.</p>
+            <h2 className="text-2xl font-bold text-gray-900 tracking-tight">Hopeline</h2>
+            <p className="text-sky-600 font-medium text-sm mt-1">The answers you are looking for.</p>
+            <p className="text-gray-500 text-xs mt-3">Share a few details below to get started.</p>
           </div>
           <input required type="text" placeholder="Name or Nickname" value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
           <input required type="number" placeholder="Age" value={profile.age} onChange={e => setProfile({...profile, age: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
           <input required type="text" placeholder="Preferred Language" value={profile.language} onChange={e => setProfile({...profile, language: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
           <input required type="text" placeholder="Belief System" value={profile.belief} onChange={e => setProfile({...profile, belief: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
-          <button type="submit" className="w-full bg-sky-500 p-3.5 rounded-xl font-bold text-white hover:bg-sky-600 transition-colors mt-4 shadow-md text-sm">Connect to Someone</button>
+          <button type="submit" className="w-full bg-sky-500 p-3.5 rounded-xl font-bold text-white hover:bg-sky-600 transition-colors mt-4 shadow-md text-sm">Find Your Guide</button>
         </form>
       </div>
     );
@@ -175,9 +177,9 @@ export default function GuestScanner({ params }: { params: { source: string } })
           <HeartHandshake size={20} />
         </div>
         <div>
-          <h1 className="font-bold text-base text-gray-900 leading-tight">Hopeline Support</h1>
+          <h1 className="font-bold text-base text-gray-900 leading-tight">Hopeline</h1>
           <p className="text-xs text-sky-600 flex items-center gap-1 font-medium">
-            <span className="inline-block w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span> Active Advocate
+            <span className="inline-block w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span> Active Guide
           </p>
         </div>
       </div>
