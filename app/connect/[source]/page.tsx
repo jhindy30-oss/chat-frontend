@@ -57,10 +57,25 @@ const translations = {
     secureMsg: "الرسائل آمنة ومشفرة 🔒",
     chatPlace: "اكتب رسالة... ✍️",
     autoGreet: "أهلاً بك 👋. شكرًا لتواصلك معنا. تم إبلاغ الدليل وسيكون معك قريبًا لمساعدتك في العثور على الإجابات التي تبحث عنها."
+  },
+  ur: {
+    brand: "ہوپ لائن",
+    slogan: "وہ جوابات جن کی آپ کو تلاش ہے۔",
+    instructions: "شروع کرنے کے لیے نیچے کچھ تفصیلات شیئر کریں 👇",
+    namePlace: "نام یا عرفی نام 👤",
+    agePlace: "عمر 🎂",
+    langPlace: "پسندیدہ زبان 🌍",
+    beliefPlace: "عقیدہ یا مذہب 🕊️",
+    submitBtn: "اپنا رہنما تلاش کریں ✨",
+    chatHeader: "ہوپ لائن 💙",
+    chatSubHeader: "فعال رہنما 🧭",
+    secureMsg: "پیغامات محفوظ اور انکرپٹڈ ہیں 🔒",
+    chatPlace: "پیغام لکھیں... ✍️",
+    autoGreet: "ہیلو 👋۔ ہم سے رابطہ کرنے کا شکریہ۔ ایک رہنما کو مطلع کر دیا گیا ہے اور وہ جلد ہی آپ کے ساتھ ہوں گے تاکہ آپ کو وہ جوابات تلاش کرنے میں مدد مل سکے جو آپ ڈھونڈ رہے ہیں۔"
   }
 };
 
-type LangKey = 'en' | 'es' | 'ar';
+type LangKey = 'en' | 'es' | 'ar' | 'ur';
 
 const renderMessageText = (text: string) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -216,18 +231,19 @@ export default function GuestScanner({ params }: { params: { source: string } })
           <Globe size={48} className="text-sky-500 mx-auto mb-2" />
           <h2 className="text-xl font-bold text-gray-900 mb-2">
             Choose your language<br/>
-            <span className="text-base text-gray-500 font-medium mt-1 block">Elige tu idioma / اختر لغتك</span>
+            <span className="text-[13px] text-gray-500 font-medium mt-1 block">Elige tu idioma / اختر لغتك / اپنی زبان کا انتخاب کریں</span>
           </h2>
           <button onClick={() => selectLanguage('en')} className="w-full bg-sky-50 p-4 rounded-2xl font-bold text-sky-700 hover:bg-sky-100 transition-colors border border-sky-200">English 🇺🇸🇬🇧</button>
           <button onClick={() => selectLanguage('es')} className="w-full bg-sky-50 p-4 rounded-2xl font-bold text-sky-700 hover:bg-sky-100 transition-colors border border-sky-200">Español 🇪🇸</button>
           <button onClick={() => selectLanguage('ar')} className="w-full bg-sky-50 p-4 rounded-2xl font-bold text-sky-700 hover:bg-sky-100 transition-colors border border-sky-200" dir="rtl">العربية 🇸🇦</button>
+          <button onClick={() => selectLanguage('ur')} className="w-full bg-sky-50 p-4 rounded-2xl font-bold text-sky-700 hover:bg-sky-100 transition-colors border border-sky-200" dir="rtl">اردو 🇵🇰</button>
         </div>
       </div>
     );
   }
 
   const t = translations[selectedLang];
-  const isRtl = selectedLang === 'ar';
+  const isRtl = selectedLang === 'ar' || selectedLang === 'ur';
 
   // 2. Intake Form Screen
   if (!isSubmitted) {
