@@ -83,7 +83,7 @@ const renderMessageText = (text: string) => {
   return parts.map((part, i) => {
     if (part.match(urlRegex)) {
       return (
-        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80 break-all">
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-85 break-all">
           {part}
         </a>
       );
@@ -223,7 +223,6 @@ export default function GuestScanner({ params }: { params: { source: string } })
      return <div className="h-[100dvh] bg-sky-50 flex items-center justify-center"><Loader2 className="animate-spin text-sky-500" size={48} /></div>;
   }
 
-  // 1. Language Selection Screen
   if (!selectedLang) {
     return (
       <div className="h-[100dvh] bg-sky-50 flex items-center justify-center p-4">
@@ -245,7 +244,6 @@ export default function GuestScanner({ params }: { params: { source: string } })
   const t = translations[selectedLang];
   const isRtl = selectedLang === 'ar' || selectedLang === 'ur';
 
-  // 2. Intake Form Screen
   if (!isSubmitted) {
     return (
       <div className="h-[100dvh] bg-sky-50 flex items-center justify-center p-4" dir={isRtl ? 'rtl' : 'ltr'}>
@@ -268,7 +266,6 @@ export default function GuestScanner({ params }: { params: { source: string } })
     );
   }
 
-  // 3. Active Chat Screen
   return (
     <div className="flex flex-col h-[100dvh] bg-slate-50 overflow-hidden select-none" dir={isRtl ? 'rtl' : 'ltr'}>
       <div className="px-4 py-3 bg-white border-b border-gray-200 shadow-sm flex items-center gap-3 shrink-0 z-10">
@@ -290,7 +287,7 @@ export default function GuestScanner({ params }: { params: { source: string } })
 
         {messages.map((msg) => (
           <div key={msg.id} className={`flex ${msg.sender === 'guest' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`px-4 py-2.5 rounded-2xl max-w-[82%] text-sm leading-relaxed shadow-2xs break-words select-text ${msg.sender === 'guest' ? 'bg-sky-500 text-white rounded-br-xs' : 'bg-white text-gray-800 border border-gray-200/80 rounded-bl-xs'}`}>
+            <div className={`px-4 py-2.5 rounded-2xl max-w-[82%] text-sm leading-relaxed shadow-2xs break-words whitespace-pre-wrap select-text ${msg.sender === 'guest' ? 'bg-sky-500 text-white rounded-br-xs' : 'bg-white text-gray-800 border border-gray-200/80 rounded-bl-xs'}`}>
               {renderMessageText(msg.text)}
             </div>
           </div>
