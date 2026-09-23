@@ -22,6 +22,22 @@ interface Message {
   sender: 'guest' | 'admin';
 }
 
+// Helper function to make URLs clickable
+const renderMessageText = (text: string) => {
+  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  const parts = text.split(urlRegex);
+  return parts.map((part, i) => {
+    if (part.match(urlRegex)) {
+      return (
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80 break-all">
+          {part}
+        </a>
+      );
+    }
+    return part;
+  });
+};
+
 export default function HostDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [email, setEmail] = useState('');
@@ -203,8 +219,8 @@ export default function HostDashboard() {
             <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-[#f0f4f8]">
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`px-4 py-2.5 rounded-2xl max-w-[70%] text-sm leading-relaxed shadow-2xs break-words ${msg.sender === 'admin' ? 'bg-sky-500 text-white rounded-br-xs' : 'bg-white text-gray-900 border border-gray-200/80 rounded-bl-xs'}`}>
-                    {msg.text}
+                  <div className={`px-4 py-2.5 rounded-2xl max-w-[70%] text-sm leading-relaxed shadow-2xs break-words select-text ${msg.sender === 'admin' ? 'bg-sky-500 text-white rounded-br-xs' : 'bg-white text-gray-900 border border-gray-200/80 rounded-bl-xs'}`}>
+                    {renderMessageText(msg.text)}
                   </div>
                 </div>
               ))}
