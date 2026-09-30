@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,9 +12,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  themeColor: "#0ea5e9", // Match the sky-500 branding
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1, // Prevents auto-zoom on mobile inputs
+};
+
 export const metadata: Metadata = {
   title: "Hopeline | The answers you are looking for",
   description: "Connect with a friend to find the answers you are looking for.",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Hopeline",
+  },
 };
 
 export default function RootLayout({
