@@ -229,6 +229,16 @@ export default function GuestScanner({ params }: { params: { source: string } })
         timestamp: serverTimestamp()
       });
 
+      // Notify Admin of a new chat
+      await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          title: 'New Connection ✨', 
+          body: `${profile.name || 'Someone'} is looking for a friend.` 
+        })
+      }).catch(console.error);
+
       setIsSubmitted(true);
     } catch (error: any) {
       alert("Database Error: " + error.message);
@@ -253,6 +263,16 @@ export default function GuestScanner({ params }: { params: { source: string } })
       unreadByAdmin: increment(1),
       guestTyping: false
     }, { merge: true });
+
+    // Notify Admin of a new message
+    await fetch('/api/notify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        title: 'New Message 💬', 
+        body: textToSave 
+      })
+    }).catch(console.error);
   };
 
   if (loading) {
