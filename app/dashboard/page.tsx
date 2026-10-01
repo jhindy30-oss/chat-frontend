@@ -3,6 +3,7 @@ import { useEffect, useState, FormEvent, useRef } from 'react';
 import { Send, Lock, UserCircle, ArrowLeft, MessageCircle } from 'lucide-react';
 import { collection, doc, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc, increment } from 'firebase/firestore';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { getMessaging, getToken } from 'firebase/messaging';
 
 // IMPORTANT: Adjust this relative path if needed
 import { db, auth } from '../firebase'; 
@@ -71,10 +72,6 @@ export default function HostDashboard() {
   useEffect(() => { scrollToBottom(); }, [messages]);
 
   useEffect(() => {
-    if (typeof window !== "undefined" && "Notification" in window) {
-      Notification.requestPermission();
-    }
-    
     // Check if a guest wandered into the dashboard
     const savedGuestId = localStorage.getItem('hopeline_guest_id');
     if (savedGuestId) {
@@ -99,7 +96,8 @@ export default function HostDashboard() {
         audio.volume = 0.5;
         audio.play().catch(() => {});
         
-        if (Notification.permission === "granted") {
+        // This fires a local notification if the app is open but minimized on desktop
+        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
           new Notification("New Message 👋", { body: "A guest has sent a new message." });
         }
       }
@@ -138,6 +136,25 @@ export default function HostDashboard() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       setIsAuthenticated(true);
+      
+      // Request Push Notification Token for Background Messages
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          const messaging = getMessaging();
+          const token = await getToken(messaging, { 
+            vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY 
+          });
+          
+          if (token) {
+            // Save your phone's token so the API knows where to send the ping
+            await setDoc(doc(db, 'admin_tokens', token), { 
+              token, 
+              lastActive: serverTimestamp() 
+            });
+          }
+        }
+      }
     } catch (error: any) {
       alert('Login failed: Invalid email or password.');
     }
@@ -167,7 +184,6 @@ export default function HostDashboard() {
   const currentGuest = chats.find(c => c.id === activeChat);
 
   if (!isAuthenticated) {
-    // Show the guest bouncer screen if they have an active chat saved in their browser
     if (showGuestWarning) {
       return (
         <div className="h-[100dvh] bg-slate-50 flex items-center justify-center p-4">
@@ -178,7 +194,6 @@ export default function HostDashboard() {
             <a href={guestReturnLink} className="w-full bg-sky-500 text-white p-3.5 rounded-xl font-bold text-sm hover:bg-sky-600 transition-colors shadow-sm block mb-4">
               Return to Chat ✨
             </a>
-            {/* Hidden admin bypass for your own testing */}
             <button onClick={() => setShowGuestWarning(false)} className="text-xs text-gray-400 hover:text-gray-600 underline">
               Admin Login
             </button>
@@ -187,7 +202,6 @@ export default function HostDashboard() {
       );
     }
 
-    // Default Admin Login
     return (
       <div className="h-[100dvh] bg-slate-50 flex items-center justify-center p-4">
         <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center border border-sky-100 w-full max-w-sm">
@@ -202,7 +216,6 @@ export default function HostDashboard() {
     );
   }
 
-  // ... (The rest of the Host Dashboard chat UI remains exactly the same below this)
   return (
     <div className="flex h-[100dvh] bg-slate-50 text-gray-900 overflow-hidden">
       
