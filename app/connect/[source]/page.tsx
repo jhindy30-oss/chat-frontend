@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, FormEvent, useRef } from 'react';
-import { Send, HeartHandshake, Loader2, Globe } from 'lucide-react';
+import { Send, HeartHandshake, Loader2, Globe, Link as LinkIcon, Check } from 'lucide-react';
 
 // IMPORTANT: Ensure this path matches where your firebase.ts is located
 import { db } from '../../firebase'; 
@@ -26,7 +26,8 @@ const translations = {
     chatSubHeader: "Active Friend 🧭",
     secureMsg: "Messages are secure and encrypted 🔒",
     chatPlace: "Type a message... ✍️",
-    autoGreet: "Hi there 👋. Thank you for reaching out. A friend has been notified and will be with you shortly to help you find the answers you are looking for."
+    autoGreet: "Hi there 👋. Thank you for reaching out. A friend has been notified and will be with you shortly to help you find the answers you are looking for.",
+    newReply: "Your friend sent a new message."
   },
   es: {
     brand: "Hopeline",
@@ -41,7 +42,8 @@ const translations = {
     chatSubHeader: "Amigo Activo 🧭",
     secureMsg: "Los mensajes son seguros y están encriptados 🔒",
     chatPlace: "Escribe un mensaje... ✍️",
-    autoGreet: "Hola 👋. Gracias por contactarnos. Un amigo ha sido notificado y estará contigo en breve para ayudarte a encontrar las respuestas que buscas."
+    autoGreet: "Hola 👋. Gracias por contactarnos. Un amigo ha sido notificado y estará contigo en breve para ayudarte a encontrar las respuestas que buscas.",
+    newReply: "Tu amigo envió un mensaje nuevo."
   },
   ar: {
     brand: "هوب لاين",
@@ -56,7 +58,8 @@ const translations = {
     chatSubHeader: "صديق نشط 🧭",
     secureMsg: "الرسائل آمنة ومشفرة 🔒",
     chatPlace: "اكتب رسالة... ✍️",
-    autoGreet: "أهلاً بك 👋. شكرًا لتواصلك معنا. تم إبلاغ صديق وسيكون معك قريبًا لمساعدتك في العثور على الإجابات التي تبحث عنها."
+    autoGreet: "أهلاً بك 👋. شكرًا لتواصلك معنا. تم إبلاغ صديق وسيكون معك قريبًا لمساعدتك في العثور على الإجابات التي تبحث عنها.",
+    newReply: "أرسل صديقك رسالة جديدة."
   },
   ur: {
     brand: "ہوپ لائن",
@@ -71,7 +74,8 @@ const translations = {
     chatSubHeader: "فعال دوست 🧭",
     secureMsg: "پیغامات محفوظ اور انکرپٹڈ ہیں 🔒",
     chatPlace: "پیغام لکھیں... ✍️",
-    autoGreet: "ہیلو 👋۔ ہم سے رابطہ کرنے کا شکریہ۔ ایک دوست کو مطلع کر دیا گیا ہے اور وہ جلد ہی آپ کے ساتھ ہوں گے تاکہ آپ کو وہ جوابات تلاش کرنے میں مدد مل سکے جو آپ ڈھونڈ رہے ہیں۔"
+    autoGreet: "ہیلو 👋۔ ہم سے رابطہ کرنے کا شکریہ۔ ایک دوست کو مطلع کر دیا گیا ہے اور وہ جلد ہی آپ کے ساتھ ہوں گے تاکہ آپ کو وہ جوابات تلاش کرنے میں مدد مل سکے جو آپ ڈھونڈ رہے ہیں۔",
+    newReply: "آپ کے دوست نے ایک نیا پیغام بھیجا ہے۔"
   }
 };
 
@@ -101,6 +105,7 @@ export default function GuestScanner({ params }: { params: { source: string } })
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [isHostTyping, setIsHostTyping] = useState(false);
+  const [copied, setCopied] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -111,12 +116,24 @@ export default function GuestScanner({ params }: { params: { source: string } })
   };
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const urlChatId = searchParams.get('chat');
+    
     const savedId = localStorage.getItem('hopeline_guest_id');
     const savedLang = localStorage.getItem('hopeline_lang') as LangKey;
+    
     if (savedLang) setSelectedLang(savedLang);
-    if (savedId) {
+
+    if (urlChatId) {
+      // User clicked a unique chat link, force load this specific chat
+      localStorage.setItem('hopeline_guest_id', urlChatId);
+      setGuestId(urlChatId);
+      setIsSubmitted(true);
+    } else if (savedId) {
+      // User returned normally, load cached chat and update URL to show the link
       setGuestId(savedId);
       setIsSubmitted(true);
+      window.history.replaceState(null, '', `?chat=${savedId}`);
     }
     setLoading(false);
   }, []);
@@ -148,11 +165,16 @@ export default function GuestScanner({ params }: { params: { source: string } })
         if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([100, 30, 100]); 
         const audio = new Audio('https://actions.google.com/sounds/v1/water/water_drop.ogg');
         audio.volume = 0.4; audio.play().catch(() => {});
+
+        // Fire a background notification if they switched tabs/apps
+        if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted" && document.hidden) {
+          new Notification("Hopeline 💙", { body: translations[selectedLang || 'en'].newReply });
+        }
       }
     }
     previousMessageCount.current = messages.length;
     scrollToBottom();
-  }, [messages]);
+  }, [messages, selectedLang]);
 
   const handleTyping = async () => {
     if (!guestId) return;
@@ -162,6 +184,12 @@ export default function GuestScanner({ params }: { params: { source: string } })
     typingTimeoutRef.current = setTimeout(async () => {
       await setDoc(doc(db, 'chats', guestId), { guestTyping: false }, { merge: true });
     }, 2000);
+  };
+
+  const copyReturnLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const selectLanguage = (lang: LangKey) => {
@@ -175,6 +203,14 @@ export default function GuestScanner({ params }: { params: { source: string } })
       const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
       localStorage.setItem('hopeline_guest_id', newId);
       setGuestId(newId);
+      
+      // Update the browser URL silently so they can copy/bookmark it
+      window.history.replaceState(null, '', `?chat=${newId}`);
+
+      // Ask for notification permissions so we can ping them later
+      if (typeof window !== "undefined" && "Notification" in window) {
+        Notification.requestPermission();
+      }
       
       await setDoc(doc(db, 'chats', newId), {
         source: params?.source || 'web-link',
@@ -272,12 +308,20 @@ export default function GuestScanner({ params }: { params: { source: string } })
         <div className="bg-sky-500 text-white p-2 rounded-full flex items-center justify-center">
           <HeartHandshake size={20} />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="font-bold text-base text-gray-900 leading-tight">{t.chatHeader}</h1>
           <p className="text-xs text-sky-600 flex items-center gap-1 font-medium">
             <span className="inline-block w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span> {t.chatSubHeader}
           </p>
         </div>
+        {/* Copy Link Button so they can bookmark or save their specific chat */}
+        <button 
+          onClick={copyReturnLink} 
+          title="Save link to return later"
+          className="p-2.5 bg-sky-50 text-sky-600 rounded-full hover:bg-sky-100 transition-colors active:scale-95"
+        >
+          {copied ? <Check size={18} className="text-emerald-500" /> : <LinkIcon size={18} />}
+        </button>
       </div>
       
       <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#f0f4f8]">
