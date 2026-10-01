@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, FormEvent, useRef } from 'react';
-import { Send, Lock, UserCircle } from 'lucide-react';
+import { Send, Lock, UserCircle, ArrowLeft } from 'lucide-react';
 import { collection, doc, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc, increment } from 'firebase/firestore';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
@@ -171,7 +171,13 @@ export default function HostDashboard() {
 
   return (
     <div className="flex h-[100dvh] bg-slate-50 text-gray-900 overflow-hidden">
-      <div className="w-80 bg-white border-r border-gray-200 flex flex-col shrink-0 z-10">
+      
+      {/* 
+        SIDEBAR:
+        Shown on mobile ONLY if no activeChat is selected.
+        Always shown on desktop (md:flex). 
+      */}
+      <div className={`${activeChat ? 'hidden md:flex' : 'flex'} w-full md:w-80 bg-white border-r border-gray-200 flex-col shrink-0 z-10`}>
         <div className="p-4 border-b border-gray-200 bg-slate-50/80 flex items-center justify-between">
           <h2 className="font-bold text-base text-gray-900">Active Threads 💬</h2>
           <span className="bg-sky-100 text-sky-700 text-xs font-bold px-2.5 py-0.5 rounded-full">{chats.length}</span>
@@ -209,7 +215,12 @@ export default function HostDashboard() {
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col bg-white h-full overflow-hidden">
+      {/* 
+        MAIN CHAT AREA:
+        Shown on mobile ONLY if an activeChat IS selected.
+        Always shown on desktop (md:flex). 
+      */}
+      <div className={`${!activeChat ? 'hidden md:flex' : 'flex'} flex-1 flex-col bg-white h-full overflow-hidden`}>
         {!activeChat ? (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-slate-50 p-6">
             <UserCircle size={48} className="mb-2 stroke-1 text-slate-300" />
@@ -217,19 +228,23 @@ export default function HostDashboard() {
           </div>
         ) : (
           <div className="flex-1 flex flex-col h-full overflow-hidden">
-            <div className="px-6 py-3.5 border-b border-gray-200 bg-slate-50/80 flex items-center justify-between shrink-0">
+            <div className="px-4 md:px-6 py-3.5 border-b border-gray-200 bg-slate-50/80 flex items-center shrink-0">
+              {/* Back button for mobile users */}
+              <button onClick={() => setActiveChat(null)} className="md:hidden mr-3 text-gray-500 hover:text-gray-900 active:scale-95 transition-transform p-1">
+                <ArrowLeft size={22} />
+              </button>
               <div>
                 <h2 className="font-bold text-base text-gray-900">{getFlag(currentGuest?.appLanguage)} {currentGuest?.profile?.name || 'Guest Thread'}</h2>
                 <p className="text-xs text-gray-500">{[currentGuest?.profile?.age ? `${currentGuest?.profile.age} yrs` : null, currentGuest?.profile?.language, currentGuest?.profile?.belief].filter(Boolean).join(' • ')}</p>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 space-y-3 bg-[#f0f4f8]">
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 bg-[#f0f4f8]">
               {messages.map((msg) => {
                 const isRTL = (currentGuest?.appLanguage === 'ar' || currentGuest?.appLanguage === 'ur') && msg.sender === 'guest';
                 return (
                   <div key={msg.id} className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
-                    <div dir={isRTL ? 'rtl' : 'ltr'} className={`px-4 py-2.5 rounded-2xl max-w-[70%] text-sm leading-relaxed shadow-2xs break-words whitespace-pre-wrap select-text ${msg.sender === 'admin' ? 'bg-sky-500 text-white rounded-br-xs' : 'bg-white text-gray-900 border border-gray-200/80 rounded-bl-xs'}`}>
+                    <div dir={isRTL ? 'rtl' : 'ltr'} className={`px-4 py-2.5 rounded-2xl max-w-[85%] md:max-w-[70%] text-sm leading-relaxed shadow-2xs break-words whitespace-pre-wrap select-text ${msg.sender === 'admin' ? 'bg-sky-500 text-white rounded-br-xs' : 'bg-white text-gray-900 border border-gray-200/80 rounded-bl-xs'}`}>
                       {renderMessageText(msg.text)}
                     </div>
                   </div>
@@ -248,8 +263,8 @@ export default function HostDashboard() {
               <div ref={messagesEndRef} />
             </div>
 
-            <form onSubmit={sendMessage} className="p-4 bg-white border-t border-gray-200 flex items-center gap-3 shrink-0">
-              <input type="text" placeholder="Type your response... ✍️" value={input} onChange={(e) => { setInput(e.target.value); handleTyping(); }} className="flex-1 bg-gray-100 border border-gray-200 rounded-full px-5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-gray-900 placeholder-gray-400" />
+            <form onSubmit={sendMessage} className="p-3 md:p-4 bg-white border-t border-gray-200 flex items-center gap-2 md:gap-3 shrink-0">
+              <input type="text" placeholder="Type your response... ✍️" value={input} onChange={(e) => { setInput(e.target.value); handleTyping(); }} className="flex-1 bg-gray-100 border border-gray-200 rounded-full px-4 md:px-5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-gray-900 placeholder-gray-400" />
               <button type="submit" disabled={!input.trim()} className="bg-sky-500 text-white p-2.5 rounded-full hover:bg-sky-600 disabled:opacity-40 transition-all shrink-0 active:scale-95 shadow-sm"><Send size={18} /></button>
             </form>
           </div>
