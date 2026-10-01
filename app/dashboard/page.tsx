@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, FormEvent, useRef } from 'react';
-import { Send, Lock, UserCircle, ArrowLeft } from 'lucide-react';
+import { Send, Lock, UserCircle, ArrowLeft, MessageCircle } from 'lucide-react';
 import { collection, doc, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc, increment } from 'firebase/firestore';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
@@ -50,10 +50,15 @@ export default function HostDashboard() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
+  // Dashboard states
   const [chats, setChats] = useState<Guest[]>([]);
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  
+  // Guest Redirect State
+  const [showGuestWarning, setShowGuestWarning] = useState(false);
+  const [guestReturnLink, setGuestReturnLink] = useState('');
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -68,6 +73,13 @@ export default function HostDashboard() {
   useEffect(() => {
     if (typeof window !== "undefined" && "Notification" in window) {
       Notification.requestPermission();
+    }
+    
+    // Check if a guest wandered into the dashboard
+    const savedGuestId = localStorage.getItem('hopeline_guest_id');
+    if (savedGuestId) {
+      setShowGuestWarning(true);
+      setGuestReturnLink(`/connect/web?chat=${savedGuestId}`);
     }
   }, []);
 
@@ -155,6 +167,27 @@ export default function HostDashboard() {
   const currentGuest = chats.find(c => c.id === activeChat);
 
   if (!isAuthenticated) {
+    // Show the guest bouncer screen if they have an active chat saved in their browser
+    if (showGuestWarning) {
+      return (
+        <div className="h-[100dvh] bg-slate-50 flex items-center justify-center p-4">
+          <div className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center border border-sky-100 w-full max-w-sm text-center">
+            <div className="bg-sky-100 p-4 rounded-full mb-4 text-sky-600"><MessageCircle size={36} /></div>
+            <h2 className="text-xl font-bold mb-2 text-gray-900">Active Chat Found</h2>
+            <p className="text-sm text-gray-500 mb-6">It looks like you are currently talking with a friend.</p>
+            <a href={guestReturnLink} className="w-full bg-sky-500 text-white p-3.5 rounded-xl font-bold text-sm hover:bg-sky-600 transition-colors shadow-sm block mb-4">
+              Return to Chat ✨
+            </a>
+            {/* Hidden admin bypass for your own testing */}
+            <button onClick={() => setShowGuestWarning(false)} className="text-xs text-gray-400 hover:text-gray-600 underline">
+              Admin Login
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // Default Admin Login
     return (
       <div className="h-[100dvh] bg-slate-50 flex items-center justify-center p-4">
         <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center border border-sky-100 w-full max-w-sm">
@@ -169,14 +202,11 @@ export default function HostDashboard() {
     );
   }
 
+  // ... (The rest of the Host Dashboard chat UI remains exactly the same below this)
   return (
     <div className="flex h-[100dvh] bg-slate-50 text-gray-900 overflow-hidden">
       
-      {/* 
-        SIDEBAR:
-        Shown on mobile ONLY if no activeChat is selected.
-        Always shown on desktop (md:flex). 
-      */}
+      {/* SIDEBAR */}
       <div className={`${activeChat ? 'hidden md:flex' : 'flex'} w-full md:w-80 bg-white border-r border-gray-200 flex-col shrink-0 z-10`}>
         <div className="p-4 border-b border-gray-200 bg-slate-50/80 flex items-center justify-between">
           <h2 className="font-bold text-base text-gray-900">Active Threads 💬</h2>
@@ -215,11 +245,7 @@ export default function HostDashboard() {
         </div>
       </div>
 
-      {/* 
-        MAIN CHAT AREA:
-        Shown on mobile ONLY if an activeChat IS selected.
-        Always shown on desktop (md:flex). 
-      */}
+      {/* MAIN CHAT AREA */}
       <div className={`${!activeChat ? 'hidden md:flex' : 'flex'} flex-1 flex-col bg-white h-full overflow-hidden`}>
         {!activeChat ? (
           <div className="flex-1 flex flex-col items-center justify-center text-gray-400 bg-slate-50 p-6">
@@ -229,7 +255,6 @@ export default function HostDashboard() {
         ) : (
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             <div className="px-4 md:px-6 py-3.5 border-b border-gray-200 bg-slate-50/80 flex items-center shrink-0">
-              {/* Back button for mobile users */}
               <button onClick={() => setActiveChat(null)} className="md:hidden mr-3 text-gray-500 hover:text-gray-900 active:scale-95 transition-transform p-1">
                 <ArrowLeft size={22} />
               </button>
