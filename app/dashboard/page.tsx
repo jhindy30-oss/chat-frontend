@@ -131,30 +131,7 @@ export default function HostDashboard() {
     }, 2000);
   };
 
-  const handleLogin = async (e: FormEvent) => {
-    e.preventDefault();
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      setIsAuthenticated(true);
-      
-      // Request Push Notification Token for Background Messages
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          const messaging = getMessaging();
-          const token = await getToken(messaging, { 
-            vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY 
-          });
-          
-          if (token) {
-            // Save your phone's token so the API knows where to send the ping
-            await setDoc(doc(db, 'admin_tokens', token), { 
-              token, 
-              lastActive: serverTimestamp() 
-            });
-          }
-        }
-      }
+  Login failed: Invalid email or password.
     } catch (error: any) {
       alert('Login failed: Invalid email or password.');
     }
