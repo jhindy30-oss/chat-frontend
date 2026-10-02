@@ -101,6 +101,7 @@ export default function GuestScanner({ params }: { params: { source: string } })
   const [guestId, setGuestId] = useState<string | null>(null);
   const [profile, setProfile] = useState({ name: '', age: '', language: '', belief: '' });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
@@ -125,12 +126,10 @@ export default function GuestScanner({ params }: { params: { source: string } })
     if (savedLang) setSelectedLang(savedLang);
 
     if (urlChatId) {
-      // User clicked a unique chat link, force load this specific chat
       localStorage.setItem('hopeline_guest_id', urlChatId);
       setGuestId(urlChatId);
       setIsSubmitted(true);
     } else if (savedId) {
-      // User returned normally, load cached chat and update URL to show the link
       setGuestId(savedId);
       setIsSubmitted(true);
       window.history.replaceState(null, '', `?chat=${savedId}`);
@@ -166,7 +165,6 @@ export default function GuestScanner({ params }: { params: { source: string } })
         const audio = new Audio('https://actions.google.com/sounds/v1/water/water_drop.ogg');
         audio.volume = 0.4; audio.play().catch(() => {});
 
-        // Fire a background notification if they switched tabs/apps
         if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted" && document.hidden) {
           new Notification("Hopeline 💙", { body: translations[selectedLang || 'en'].newReply });
         }
@@ -199,15 +197,16 @@ export default function GuestScanner({ params }: { params: { source: string } })
 
   const joinQueue = async (e: FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    
     try {
       const newId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
       localStorage.setItem('hopeline_guest_id', newId);
       setGuestId(newId);
       
-      // Update the browser URL silently so they can copy/bookmark it
       window.history.replaceState(null, '', `?chat=${newId}`);
 
-      // Ask for notification permissions so we can ping them later
       if (typeof window !== "undefined" && "Notification" in window) {
         Notification.requestPermission();
       }
@@ -229,7 +228,6 @@ export default function GuestScanner({ params }: { params: { source: string } })
         timestamp: serverTimestamp()
       });
 
-      // Notify Admin of a new chat
       await fetch('/api/notify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -242,6 +240,7 @@ export default function GuestScanner({ params }: { params: { source: string } })
       setIsSubmitted(true);
     } catch (error: any) {
       alert("Database Error: " + error.message);
+      setIsSubmitting(false);
     }
   };
 
@@ -264,7 +263,6 @@ export default function GuestScanner({ params }: { params: { source: string } })
       guestTyping: false
     }, { merge: true });
 
-    // Notify Admin of a new message
     await fetch('/api/notify', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -316,7 +314,9 @@ export default function GuestScanner({ params }: { params: { source: string } })
           <input required type="number" placeholder={t.agePlace} value={profile.age} onChange={e => setProfile({...profile, age: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
           <input required type="text" placeholder={t.langPlace} value={profile.language} onChange={e => setProfile({...profile, language: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
           <input required type="text" placeholder={t.beliefPlace} value={profile.belief} onChange={e => setProfile({...profile, belief: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
-          <button type="submit" className="w-full bg-sky-500 p-3.5 rounded-xl font-bold text-white hover:bg-sky-600 transition-colors mt-4 shadow-md text-sm">{t.submitBtn}</button>
+          <button type="submit" disabled={isSubmitting} className="w-full bg-sky-500 p-3.5 rounded-xl font-bold text-white hover:bg-sky-600 disabled:opacity-50 transition-colors mt-4 shadow-md text-sm">
+            {isSubmitting ? 'Loading... ⏳' : t.submitBtn}
+          </button>
         </form>
       </div>
     );
@@ -334,7 +334,6 @@ export default function GuestScanner({ params }: { params: { source: string } })
             <span className="inline-block w-2 h-2 rounded-full bg-sky-500 animate-pulse"></span> {t.chatSubHeader}
           </p>
         </div>
-        {/* Copy Link Button so they can bookmark or save their specific chat */}
         <button 
           onClick={copyReturnLink} 
           title="Save link to return later"
