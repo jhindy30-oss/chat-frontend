@@ -96,7 +96,6 @@ export default function HostDashboard() {
         audio.volume = 0.5;
         audio.play().catch(() => {});
         
-        // This fires a local notification if the app is open but minimized on desktop
         if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
           new Notification("New Message 👋", { body: "A guest has sent a new message." });
         }
@@ -131,9 +130,38 @@ export default function HostDashboard() {
     }, 2000);
   };
 
-  Login failed: Invalid email or password.
+  const handleLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    
+    // Step 1: Handle the actual login
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      setIsAuthenticated(true);
     } catch (error: any) {
       alert('Login failed: Invalid email or password.');
+      return; // Stop completely if login actually fails
+    }
+
+    // Step 2: Handle the push notifications separately
+    try {
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          const messaging = getMessaging();
+          const token = await getToken(messaging, { 
+            vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY 
+          });
+          
+          if (token) {
+            await setDoc(doc(db, 'admin_tokens', token), { 
+              token, 
+              lastActive: serverTimestamp() 
+            });
+          }
+        }
+      }
+    } catch (notifyError: any) {
+      console.error("Push Notification Setup Failed:", notifyError);
     }
   };
 
