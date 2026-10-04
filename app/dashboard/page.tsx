@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState, FormEvent, useRef } from 'react';
-import { Send, Lock, UserCircle, ArrowLeft, MessageCircle } from 'lucide-react';
+import { Send, Lock, UserCircle, ArrowLeft, MessageCircle, Loader2, LogOut } from 'lucide-react';
 import { collection, doc, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc, increment } from 'firebase/firestore';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getMessaging, getToken } from 'firebase/messaging';
 
 // IMPORTANT: Adjust this relative path if needed
@@ -48,6 +48,7 @@ const getFlag = (lang?: string) => {
 
 export default function HostDashboard() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
@@ -70,6 +71,20 @@ export default function HostDashboard() {
   };
 
   useEffect(() => { scrollToBottom(); }, [messages]);
+
+  // Check for existing login session on load
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+      }
+      setIsAuthLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     // Check if a guest wandered into the dashboard
@@ -133,16 +148,14 @@ export default function HostDashboard() {
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     
-    // Step 1: Handle the actual login
     try {
       await signInWithEmailAndPassword(auth, email, password);
       setIsAuthenticated(true);
     } catch (error: any) {
       alert('Login failed: Invalid email or password.');
-      return; // Stop completely if login actually fails
+      return; 
     }
 
-    // Step 2: Handle the push notifications separately
     try {
       if (typeof window !== 'undefined' && 'Notification' in window) {
         const permission = await Notification.requestPermission();
@@ -163,6 +176,10 @@ export default function HostDashboard() {
     } catch (notifyError: any) {
       console.error("Push Notification Setup Failed:", notifyError);
     }
+  };
+
+  const handleSignOut = () => {
+    signOut(auth);
   };
 
   const sendMessage = async (e: FormEvent) => {
@@ -187,6 +204,14 @@ export default function HostDashboard() {
   };
 
   const currentGuest = chats.find(c => c.id === activeChat);
+
+  if (isAuthLoading) {
+    return (
+      <div className="h-[100dvh] bg-slate-50 flex items-center justify-center">
+        <Loader2 className="animate-spin text-sky-500" size={48} />
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     if (showGuestWarning) {
@@ -213,8 +238,8 @@ export default function HostDashboard() {
           <div className="bg-sky-100 p-3 rounded-full mb-3 text-sky-600"><Lock size={32} /></div>
           <h2 className="text-xl font-bold mb-1 text-gray-900">Host Dashboard 💙</h2>
           <p className="text-xs text-gray-500 mb-6 text-center">Sign in to manage incoming guest conversations</p>
-          <input type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Admin Email 👤" className="w-full bg-gray-50 p-3 rounded-xl mb-3 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-gray-900" />
-          <input type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Password 🔒" className="w-full bg-gray-50 p-3 rounded-xl mb-5 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-gray-900" />
+          <input type="email" name="email" id="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="Admin Email 👤" className="w-full bg-gray-50 p-3 rounded-xl mb-3 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-gray-900" />
+          <input type="password" name="password" id="password" autoComplete="current-password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Password 🔒" className="w-full bg-gray-50 p-3 rounded-xl mb-5 border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-gray-900" />
           <button type="submit" className="w-full bg-sky-500 text-white p-3 rounded-xl font-bold text-sm hover:bg-sky-600 transition-colors shadow-sm">Sign In ✨</button>
         </form>
       </div>
@@ -255,11 +280,20 @@ export default function HostDashboard() {
                   {hasUnread && <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">{guest.unreadByAdmin}</span>}
                 </div>
                 <p className={`text-xs truncate ${hasUnread ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
-                  {guest.guestTyping ? <span className="text-sky-500 italic">Typing... ✍️</span> : ([guest.profile?.language, guest.profile?.belief].filter(Boolean).join(' • ') || 'No intake details')}
+                  {guest.guestTyping ? <span className="text-sky-500 italic">Typing... ✍️️</span> : ([guest.profile?.language, guest.profile?.belief].filter(Boolean).join(' • ') || 'No intake details')}
                 </p>
               </div>
             );
           })}
+        </div>
+        {/* LOGOUT BUTTON */}
+        <div className="p-4 border-t border-gray-200 bg-slate-50">
+          <button 
+            onClick={handleSignOut} 
+            className="w-full flex items-center justify-center gap-2 text-sm text-gray-600 font-medium p-2.5 hover:bg-gray-200/50 rounded-xl transition-colors active:scale-95"
+          >
+            <LogOut size={16} /> Sign Out
+          </button>
         </div>
       </div>
 
@@ -307,7 +341,7 @@ export default function HostDashboard() {
             </div>
 
             <form onSubmit={sendMessage} className="p-3 md:p-4 bg-white border-t border-gray-200 flex items-center gap-2 md:gap-3 shrink-0">
-              <input type="text" placeholder="Type your response... ✍️" value={input} onChange={(e) => { setInput(e.target.value); handleTyping(); }} className="flex-1 bg-gray-100 border border-gray-200 rounded-full px-4 md:px-5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-gray-900 placeholder-gray-400" />
+              <input type="text" name="chatMessage" id="chatMessage" autoComplete="off" placeholder="Type your response... ✍️" value={input} onChange={(e) => { setInput(e.target.value); handleTyping(); }} className="flex-1 bg-gray-100 border border-gray-200 rounded-full px-4 md:px-5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-gray-900 placeholder-gray-400" />
               <button type="submit" disabled={!input.trim()} className="bg-sky-500 text-white p-2.5 rounded-full hover:bg-sky-600 disabled:opacity-40 transition-all shrink-0 active:scale-95 shadow-sm"><Send size={18} /></button>
             </form>
           </div>
