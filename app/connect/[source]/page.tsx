@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, FormEvent, useRef } from 'react';
-import { Send, HeartHandshake, Loader2, Globe, Link as LinkIcon, Check } from 'lucide-react';
+import { Send, HeartHandshake, Loader2, Globe, Link as LinkIcon, Check, CheckCheck } from 'lucide-react';
 
 // IMPORTANT: Ensure this path matches where your firebase.ts is located
 import { db } from '../../firebase'; 
@@ -10,7 +10,14 @@ interface Message {
   id: string;
   text: string;
   sender: 'guest' | 'admin';
+  timestamp: any;
 }
+
+const formatTime = (timestamp: any) => {
+  if (!timestamp) return '...';
+  const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
 
 const translations = {
   en: {
@@ -106,6 +113,7 @@ export default function GuestScanner({ params }: { params: { source: string } })
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [isHostTyping, setIsHostTyping] = useState(false);
+  const [unreadByAdmin, setUnreadByAdmin] = useState(0);
   const [copied, setCopied] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -150,6 +158,7 @@ export default function GuestScanner({ params }: { params: { source: string } })
       if (docSnap.exists()) {
         const data = docSnap.data();
         setIsHostTyping(data.adminTyping || false);
+        setUnreadByAdmin(data.unreadByAdmin || 0); // Keep track of whether admin has read messages
         if (data.unreadByGuest > 0) setDoc(doc(db, 'chats', guestId), { unreadByGuest: 0 }, { merge: true });
       }
     });
@@ -348,13 +357,23 @@ export default function GuestScanner({ params }: { params: { source: string } })
           <span className="bg-white/80 border border-gray-200/60 text-gray-500 text-[11px] px-3 py-1 rounded-full font-medium shadow-2xs">{t.secureMsg}</span>
         </div>
 
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex ${msg.sender === 'guest' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`px-4 py-2.5 rounded-2xl max-w-[82%] text-sm leading-relaxed shadow-2xs break-words whitespace-pre-wrap select-text ${msg.sender === 'guest' ? 'bg-sky-500 text-white rounded-br-xs' : 'bg-white text-gray-800 border border-gray-200/80 rounded-bl-xs'}`}>
-              {renderMessageText(msg.text)}
+        {messages.map((msg) => {
+          const isRead = unreadByAdmin === 0;
+
+          return (
+            <div key={msg.id} className={`flex ${msg.sender === 'guest' ? 'justify-end' : 'justify-start'}`}>
+              <div className={`px-4 py-2.5 rounded-2xl max-w-[82%] text-sm leading-relaxed shadow-2xs break-words whitespace-pre-wrap select-text ${msg.sender === 'guest' ? 'bg-sky-500 text-white rounded-br-xs' : 'bg-white text-gray-800 border border-gray-200/80 rounded-bl-xs'}`}>
+                {renderMessageText(msg.text)}
+                <div className={`text-[10px] mt-1.5 flex items-center justify-end gap-1 ${msg.sender === 'guest' ? 'text-sky-100' : 'text-gray-400'}`}>
+                  <span>{formatTime(msg.timestamp)}</span>
+                  {msg.sender === 'guest' && (
+                    <span>{isRead ? <CheckCheck size={14} /> : <Check size={14} />}</span>
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
         
         {isHostTyping && (
           <div className="flex justify-start">
