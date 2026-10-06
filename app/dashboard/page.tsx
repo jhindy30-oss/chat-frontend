@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, FormEvent, useRef } from 'react';
-import { Send, Lock, UserCircle, ArrowLeft, MessageCircle, Loader2, LogOut } from 'lucide-react';
+import { Send, Lock, UserCircle, ArrowLeft, MessageCircle, Loader2, LogOut, Check, CheckCheck } from 'lucide-react';
 import { collection, doc, addDoc, onSnapshot, query, orderBy, serverTimestamp, setDoc, increment } from 'firebase/firestore';
 import { signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
 import { getMessaging, getToken } from 'firebase/messaging';
@@ -15,6 +15,7 @@ interface Guest {
   profile: { name: string; age: string; language: string; belief: string; };
   status: string;
   unreadByAdmin?: number;
+  unreadByGuest?: number;
   guestTyping?: boolean;
 }
 
@@ -22,7 +23,14 @@ interface Message {
   id: string;
   text: string;
   sender: 'guest' | 'admin';
+  timestamp: any;
 }
+
+const formatTime = (timestamp: any) => {
+  if (!timestamp) return '...';
+  const date = timestamp?.toDate ? timestamp.toDate() : new Date(timestamp);
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+};
 
 const renderMessageText = (text: string) => {
   const urlRegex = /(https?:\/\/[^\s]+)/g;
@@ -87,7 +95,6 @@ export default function HostDashboard() {
   }, []);
 
   useEffect(() => {
-    // Check if a guest wandered into the dashboard
     const savedGuestId = localStorage.getItem('hopeline_guest_id');
     if (savedGuestId) {
       setShowGuestWarning(true);
@@ -147,7 +154,6 @@ export default function HostDashboard() {
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
-    
     try {
       await signInWithEmailAndPassword(auth, email, password);
       setIsAuthenticated(true);
@@ -161,15 +167,9 @@ export default function HostDashboard() {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
           const messaging = getMessaging();
-          const token = await getToken(messaging, { 
-            vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY 
-          });
-          
+          const token = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
           if (token) {
-            await setDoc(doc(db, 'admin_tokens', token), { 
-              token, 
-              lastActive: serverTimestamp() 
-            });
+            await setDoc(doc(db, 'admin_tokens', token), { token, lastActive: serverTimestamp() });
           }
         }
       }
@@ -178,9 +178,7 @@ export default function HostDashboard() {
     }
   };
 
-  const handleSignOut = () => {
-    signOut(auth);
-  };
+  const handleSignOut = () => signOut(auth);
 
   const sendMessage = async (e: FormEvent) => {
     e.preventDefault();
@@ -206,11 +204,7 @@ export default function HostDashboard() {
   const currentGuest = chats.find(c => c.id === activeChat);
 
   if (isAuthLoading) {
-    return (
-      <div className="h-[100dvh] bg-slate-50 flex items-center justify-center">
-        <Loader2 className="animate-spin text-sky-500" size={48} />
-      </div>
-    );
+    return <div className="h-[100dvh] bg-slate-50 flex items-center justify-center"><Loader2 className="animate-spin text-sky-500" size={48} /></div>;
   }
 
   if (!isAuthenticated) {
@@ -221,12 +215,8 @@ export default function HostDashboard() {
             <div className="bg-sky-100 p-4 rounded-full mb-4 text-sky-600"><MessageCircle size={36} /></div>
             <h2 className="text-xl font-bold mb-2 text-gray-900">Active Chat Found</h2>
             <p className="text-sm text-gray-500 mb-6">It looks like you are currently talking with a friend.</p>
-            <a href={guestReturnLink} className="w-full bg-sky-500 text-white p-3.5 rounded-xl font-bold text-sm hover:bg-sky-600 transition-colors shadow-sm block mb-4">
-              Return to Chat ✨
-            </a>
-            <button onClick={() => setShowGuestWarning(false)} className="text-xs text-gray-400 hover:text-gray-600 underline">
-              Admin Login
-            </button>
+            <a href={guestReturnLink} className="w-full bg-sky-500 text-white p-3.5 rounded-xl font-bold text-sm hover:bg-sky-600 transition-colors shadow-sm block mb-4">Return to Chat ✨</a>
+            <button onClick={() => setShowGuestWarning(false)} className="text-xs text-gray-400 hover:text-gray-600 underline">Admin Login</button>
           </div>
         </div>
       );
@@ -263,24 +253,16 @@ export default function HostDashboard() {
             const flag = getFlag(guest.appLanguage);
             
             return (
-              <div 
-                key={guest.id} 
-                onClick={() => setActiveChat(guest.id)}
-                className={`p-4 border-b border-gray-100 cursor-pointer transition-colors relative ${isSelected ? 'bg-sky-50/60 border-l-4 border-l-sky-500' : 'hover:bg-slate-50 border-l-4 border-l-transparent'}`}
-              >
+              <div key={guest.id} onClick={() => setActiveChat(guest.id)} className={`p-4 border-b border-gray-100 cursor-pointer transition-colors relative ${isSelected ? 'bg-sky-50/60 border-l-4 border-l-sky-500' : 'hover:bg-slate-50 border-l-4 border-l-transparent'}`}>
                 <div className="mb-1 flex justify-between items-start">
                   <div className="flex items-center gap-2">
-                    <p className={`text-sm ${hasUnread || isNew ? 'font-bold text-black' : 'font-medium text-gray-700'}`}>
-                      {flag} {guest.profile?.name || 'Anonymous'}
-                    </p>
-                    {isNew && (
-                      <span className="bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm">New</span>
-                    )}
+                    <p className={`text-sm ${hasUnread || isNew ? 'font-bold text-black' : 'font-medium text-gray-700'}`}>{flag} {guest.profile?.name || 'Anonymous'}</p>
+                    {isNew && <span className="bg-emerald-500 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider shadow-sm">New</span>}
                   </div>
                   {hasUnread && <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">{guest.unreadByAdmin}</span>}
                 </div>
                 <p className={`text-xs truncate ${hasUnread ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>
-                  {guest.guestTyping ? <span className="text-sky-500 italic">Typing... ✍️️</span> : ([guest.profile?.language, guest.profile?.belief].filter(Boolean).join(' • ') || 'No intake details')}
+                  {guest.guestTyping ? <span className="text-sky-500 italic">Typing... ✍</span> : ([guest.profile?.language, guest.profile?.belief].filter(Boolean).join(' • ') || 'No intake details')}
                 </p>
               </div>
             );
@@ -288,10 +270,7 @@ export default function HostDashboard() {
         </div>
         {/* LOGOUT BUTTON */}
         <div className="p-4 border-t border-gray-200 bg-slate-50">
-          <button 
-            onClick={handleSignOut} 
-            className="w-full flex items-center justify-center gap-2 text-sm text-gray-600 font-medium p-2.5 hover:bg-gray-200/50 rounded-xl transition-colors active:scale-95"
-          >
+          <button onClick={handleSignOut} className="w-full flex items-center justify-center gap-2 text-sm text-gray-600 font-medium p-2.5 hover:bg-gray-200/50 rounded-xl transition-colors active:scale-95">
             <LogOut size={16} /> Sign Out
           </button>
         </div>
@@ -319,34 +298,11 @@ export default function HostDashboard() {
             <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 bg-[#f0f4f8]">
               {messages.map((msg) => {
                 const isRTL = (currentGuest?.appLanguage === 'ar' || currentGuest?.appLanguage === 'ur') && msg.sender === 'guest';
+                // If unreadByGuest is 0, it means they have seen all our admin messages
+                const isRead = currentGuest?.unreadByGuest === 0;
+                
                 return (
                   <div key={msg.id} className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
                     <div dir={isRTL ? 'rtl' : 'ltr'} className={`px-4 py-2.5 rounded-2xl max-w-[85%] md:max-w-[70%] text-sm leading-relaxed shadow-2xs break-words whitespace-pre-wrap select-text ${msg.sender === 'admin' ? 'bg-sky-500 text-white rounded-br-xs' : 'bg-white text-gray-900 border border-gray-200/80 rounded-bl-xs'}`}>
                       {renderMessageText(msg.text)}
-                    </div>
-                  </div>
-                );
-              })}
-              
-              {currentGuest?.guestTyping && (
-                <div className="flex justify-start">
-                  <div className="px-4 py-3 rounded-2xl bg-white border border-gray-200/80 rounded-bl-xs flex items-center gap-1 shadow-2xs">
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
-                  </div>
-                </div>
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            <form onSubmit={sendMessage} className="p-3 md:p-4 bg-white border-t border-gray-200 flex items-center gap-2 md:gap-3 shrink-0">
-              <input type="text" name="chatMessage" id="chatMessage" autoComplete="off" placeholder="Type your response... ✍️" value={input} onChange={(e) => { setInput(e.target.value); handleTyping(); }} className="flex-1 bg-gray-100 border border-gray-200 rounded-full px-4 md:px-5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-gray-900 placeholder-gray-400" />
-              <button type="submit" disabled={!input.trim()} className="bg-sky-500 text-white p-2.5 rounded-full hover:bg-sky-600 disabled:opacity-40 transition-all shrink-0 active:scale-95 shadow-sm"><Send size={18} /></button>
-            </form>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+                      <div className={`text-[10px] mt-1.5 flex items-center justify-end gap-1 ${msg.sender === 'admin' ? 'text-
