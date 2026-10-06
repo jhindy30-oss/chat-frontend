@@ -204,7 +204,11 @@ export default function HostDashboard() {
   const currentGuest = chats.find(c => c.id === activeChat);
 
   if (isAuthLoading) {
-    return <div className="h-[100dvh] bg-slate-50 flex items-center justify-center"><Loader2 className="animate-spin text-sky-500" size={48} /></div>;
+    return (
+      <div className="h-[100dvh] bg-slate-50 flex items-center justify-center">
+        <Loader2 className="animate-spin text-sky-500" size={48} />
+      </div>
+    );
   }
 
   if (!isAuthenticated) {
@@ -298,11 +302,51 @@ export default function HostDashboard() {
             <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-3 bg-[#f0f4f8]">
               {messages.map((msg) => {
                 const isRTL = (currentGuest?.appLanguage === 'ar' || currentGuest?.appLanguage === 'ur') && msg.sender === 'guest';
-                // If unreadByGuest is 0, it means they have seen all our admin messages
                 const isRead = currentGuest?.unreadByGuest === 0;
                 
                 return (
                   <div key={msg.id} className={`flex ${msg.sender === 'admin' ? 'justify-end' : 'justify-start'}`}>
-                    <div dir={isRTL ? 'rtl' : 'ltr'} className={`px-4 py-2.5 rounded-2xl max-w-[85%] md:max-w-[70%] text-sm leading-relaxed shadow-2xs break-words whitespace-pre-wrap select-text ${msg.sender === 'admin' ? 'bg-sky-500 text-white rounded-br-xs' : 'bg-white text-gray-900 border border-gray-200/80 rounded-bl-xs'}`}>
+                    <div 
+                      dir={isRTL ? 'rtl' : 'ltr'} 
+                      className={`px-4 py-2.5 rounded-2xl max-w-[85%] md:max-w-[70%] text-sm leading-relaxed shadow-2xs break-words whitespace-pre-wrap select-text ${
+                        msg.sender === 'admin' 
+                          ? 'bg-sky-500 text-white rounded-br-xs' 
+                          : 'bg-white text-gray-900 border border-gray-200/80 rounded-bl-xs'
+                      }`}
+                    >
                       {renderMessageText(msg.text)}
-                      <div className={`text-[10px] mt-1.5 flex items-center justify-end gap-1 ${msg.sender === 'admin' ? 'text-
+                      <div className={`text-[10px] mt-1.5 flex items-center justify-end gap-1 ${
+                        msg.sender === 'admin' ? 'text-sky-100' : 'text-gray-400'
+                      }`}>
+                        <span>{formatTime(msg.timestamp)}</span>
+                        {msg.sender === 'admin' && (
+                          <span>{isRead ? <CheckCheck size={14} /> : <Check size={14} />}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+              
+              {currentGuest?.guestTyping && (
+                <div className="flex justify-start">
+                  <div className="px-4 py-3 rounded-2xl bg-white border border-gray-200/80 rounded-bl-xs flex items-center gap-1 shadow-2xs">
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                    <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></span>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
+            </div>
+
+            <form onSubmit={sendMessage} className="p-3 md:p-4 bg-white border-t border-gray-200 flex items-center gap-2 md:gap-3 shrink-0">
+              <input type="text" name="chatMessage" id="chatMessage" autoComplete="off" placeholder="Type your response... ✍️" value={input} onChange={(e) => { setInput(e.target.value); handleTyping(); }} className="flex-1 bg-gray-100 border border-gray-200 rounded-full px-4 md:px-5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 text-gray-900 placeholder-gray-400" />
+              <button type="submit" disabled={!input.trim()} className="bg-sky-500 text-white p-2.5 rounded-full hover:bg-sky-600 disabled:opacity-40 transition-all shrink-0 active:scale-95 shadow-sm"><Send size={18} /></button>
+            </form>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
