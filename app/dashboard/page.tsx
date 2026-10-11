@@ -12,7 +12,7 @@ interface Guest {
   id: string;
   source: string;
   appLanguage?: 'en' | 'es' | 'ar' | 'ur';
-  profile: { name: string; age: string; language: string; belief: string; };
+  profile: { name: string; email?: string; age: string; language: string; belief: string; };
   status: string;
   unreadByAdmin?: number;
   unreadByGuest?: number;
