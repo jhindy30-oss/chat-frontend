@@ -25,6 +25,7 @@ const translations = {
     slogan: "The answers you are looking for.",
     instructions: "Share a few details below to get started 👇",
     namePlace: "Name or Nickname 👤",
+    emailPlace: "Email (Optional - to get replies) ✉️",
     agePlace: "Age 🎂",
     langPlace: "Preferred Language 🌍",
     beliefPlace: "Religion 🕊️",
@@ -41,6 +42,7 @@ const translations = {
     slogan: "Las respuestas que estás buscando.",
     instructions: "Comparte algunos detalles a continuación para comenzar 👇",
     namePlace: "Nombre o Apodo 👤",
+    emailPlace: "Correo (Opcional - para respuestas) ✉️",
     agePlace: "Edad 🎂",
     langPlace: "Idioma preferido 🌍",
     beliefPlace: "Religión 🕊️",
@@ -57,6 +59,7 @@ const translations = {
     slogan: "الإجابات التي تبحث عنها.",
     instructions: "شارك بعض التفاصيل أدناه للبدء 👇",
     namePlace: "الاسم أو اللقب 👤",
+    emailPlace: "البريد الإلكتروني (اختياري) ✉️",
     agePlace: "العمر 🎂",
     langPlace: "اللغة المفضلة 🌍",
     beliefPlace: "الدين 🕊️",
@@ -73,6 +76,7 @@ const translations = {
     slogan: "وہ جوابات جن کی آپ کو تلاش ہے۔",
     instructions: "شروع کرنے کے لیے نیچے کچھ تفصیلات شیئر کریں 👇",
     namePlace: "نام یا عرفی نام 👤",
+    emailPlace: "ای میل (اختیاری) ✉️",
     agePlace: "عمر 🎂",
     langPlace: "پسندیدہ زبان 🌍",
     beliefPlace: "مذہب 🕊️",
@@ -106,7 +110,7 @@ const renderMessageText = (text: string) => {
 export default function GuestScanner({ params }: { params: { source: string } }) {
   const [selectedLang, setSelectedLang] = useState<LangKey | null>(null);
   const [guestId, setGuestId] = useState<string | null>(null);
-  const [profile, setProfile] = useState({ name: '', age: '', language: '', belief: '' });
+  const [profile, setProfile] = useState({ name: '', email: '', age: '', language: '', belief: '' });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -158,7 +162,7 @@ export default function GuestScanner({ params }: { params: { source: string } })
       if (docSnap.exists()) {
         const data = docSnap.data();
         setIsHostTyping(data.adminTyping || false);
-        setUnreadByAdmin(data.unreadByAdmin || 0); // Keep track of whether admin has read messages
+        setUnreadByAdmin(data.unreadByAdmin || 0);
         if (data.unreadByGuest > 0) setDoc(doc(db, 'chats', guestId), { unreadByGuest: 0 }, { merge: true });
       }
     });
@@ -320,6 +324,10 @@ export default function GuestScanner({ params }: { params: { source: string } })
             <p className="text-gray-500 text-xs mt-3">{t.instructions}</p>
           </div>
           <input required type="text" placeholder={t.namePlace} value={profile.name} onChange={e => setProfile({...profile, name: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
+          
+          {/* NEW OPTIONAL EMAIL FIELD */}
+          <input type="email" placeholder={t.emailPlace} value={profile.email} onChange={e => setProfile({...profile, email: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
+          
           <input required type="number" placeholder={t.agePlace} value={profile.age} onChange={e => setProfile({...profile, age: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
           <input required type="text" placeholder={t.langPlace} value={profile.language} onChange={e => setProfile({...profile, language: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
           <input required type="text" placeholder={t.beliefPlace} value={profile.belief} onChange={e => setProfile({...profile, belief: e.target.value})} className="w-full bg-gray-50 p-3.5 rounded-xl text-sm focus:ring-2 focus:ring-sky-500 outline-none text-gray-800 border border-gray-200" />
