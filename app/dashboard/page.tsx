@@ -181,25 +181,41 @@ export default function HostDashboard() {
   const handleSignOut = () => signOut(auth);
 
   const sendMessage = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || !activeChat) return;
+  e.preventDefault();
+  if (!input.trim() || !activeChat) return;
 
-    const textToSave = input;
-    setInput('');
+  const textToSave = input;
+  setInput('');
 
-    await addDoc(collection(db, 'chats', activeChat, 'messages'), {
-      text: textToSave,
-      sender: 'admin',
-      timestamp: serverTimestamp()
-    });
+  await addDoc(collection(db, 'chats', activeChat, 'messages'), {
+    text: textToSave,
+    sender: 'admin',
+    timestamp: serverTimestamp()
+  });
 
-    await setDoc(doc(db, 'chats', activeChat), { 
-      status: 'active', 
-      lastMessageAt: serverTimestamp(),
-      unreadByGuest: increment(1),
-      adminTyping: false
-    }, { merge: true });
-  };
+  await setDoc(doc(db, 'chats', activeChat), { 
+    status: 'active', 
+    lastMessageAt: serverTimestamp(),
+    unreadByGuest: increment(1),
+    adminTyping: false
+  }, { merge: true });
+
+  // NEW: Trigger the email if the guest provided one
+  if (currentGuest?.profile?.email) {
+    // Build the return link using the current window's URL
+    const chatUrl = `${window.location.origin}/connect/${currentGuest.source}?chat=${activeChat}`;
+    
+    fetch('/api/email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        email: currentGuest.profile.email,
+        chatUrl: chatUrl,
+        lang: currentGuest.appLanguage || 'en'
+      })
+    }).catch(console.error);
+  }
+};
 
   const currentGuest = chats.find(c => c.id === activeChat);
 
